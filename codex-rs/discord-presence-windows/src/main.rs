@@ -246,68 +246,9 @@ impl DiscordActivity {
         }
     }
 
-    fn set_details(&mut self, details: &str) {
-        let mut details = ffi::Discord_String::from_str(details);
-        unsafe {
-            ffi::Discord_Activity_SetDetails(&mut self.inner, &mut details);
-        }
-    }
-
-    fn set_state(&mut self, state: &str) {
-        let mut state = ffi::Discord_String::from_str(state);
-        unsafe {
-            ffi::Discord_Activity_SetState(&mut self.inner, &mut state);
-        }
-    }
-
     fn set_status_display_type(&mut self, display_type: DiscordStatusDisplayTypes) {
         unsafe {
             ffi::Discord_Activity_SetStatusDisplayType(&mut self.inner, &display_type);
-        }
-    }
-
-    fn set_start_timestamp(&mut self, start_timestamp_seconds: u64) {
-        let mut timestamps = ffi::Discord_ActivityTimestamps {
-            opaque: ptr::null_mut(),
-        };
-        unsafe {
-            ffi::Discord_ActivityTimestamps_Init(&mut timestamps);
-            ffi::Discord_ActivityTimestamps_SetStart(&mut timestamps, start_timestamp_seconds);
-            ffi::Discord_Activity_SetTimestamps(&mut self.inner, &mut timestamps);
-            ffi::Discord_ActivityTimestamps_Drop(&mut timestamps);
-        }
-    }
-
-    fn set_assets(
-        &mut self,
-        large_image: Option<&str>,
-        large_text: Option<&str>,
-        small_image: Option<&str>,
-        small_text: Option<&str>,
-    ) {
-        let mut assets = ffi::Discord_ActivityAssets {
-            opaque: ptr::null_mut(),
-        };
-        unsafe {
-            ffi::Discord_ActivityAssets_Init(&mut assets);
-            if let Some(large_image) = large_image {
-                let mut large_image = ffi::Discord_String::from_str(large_image);
-                ffi::Discord_ActivityAssets_SetLargeImage(&mut assets, &mut large_image);
-            }
-            if let Some(large_text) = large_text {
-                let mut large_text = ffi::Discord_String::from_str(large_text);
-                ffi::Discord_ActivityAssets_SetLargeText(&mut assets, &mut large_text);
-            }
-            if let Some(small_image) = small_image {
-                let mut small_image = ffi::Discord_String::from_str(small_image);
-                ffi::Discord_ActivityAssets_SetSmallImage(&mut assets, &mut small_image);
-            }
-            if let Some(small_text) = small_text {
-                let mut small_text = ffi::Discord_String::from_str(small_text);
-                ffi::Discord_ActivityAssets_SetSmallText(&mut assets, &mut small_text);
-            }
-            ffi::Discord_Activity_SetAssets(&mut self.inner, &mut assets);
-            ffi::Discord_ActivityAssets_Drop(&mut assets);
         }
     }
 }
@@ -418,20 +359,17 @@ impl DiscordOwnedString {
     }
 
     fn raw(&mut self) -> ffi::Discord_String {
-        ffi::Discord_String {
-            ptr: self.bytes.as_mut_ptr(),
-            size: self.bytes.len(),
-        }
+        ffi::Discord_String::from_mut_bytes(&mut self.bytes)
     }
 }
 
 #[cfg(target_os = "windows")]
 struct DiscordPresenceActivity {
     activity: DiscordActivity,
-    details: DiscordOwnedString,
-    state: Option<DiscordOwnedString>,
-    timestamps: DiscordActivityTimestamps,
-    assets: Option<DiscordPresenceAssets>,
+    _details: DiscordOwnedString,
+    _state: Option<DiscordOwnedString>,
+    _timestamps: DiscordActivityTimestamps,
+    _assets: Option<DiscordPresenceAssets>,
 }
 
 #[cfg(target_os = "windows")]
@@ -491,10 +429,10 @@ impl DiscordPresenceActivity {
 
         Self {
             activity,
-            details: details_owned,
-            state: state_owned,
-            timestamps,
-            assets,
+            _details: details_owned,
+            _state: state_owned,
+            _timestamps: timestamps,
+            _assets: assets,
         }
     }
 }
@@ -502,10 +440,10 @@ impl DiscordPresenceActivity {
 #[cfg(target_os = "windows")]
 struct DiscordPresenceAssets {
     assets: DiscordActivityAssets,
-    large_image: Option<DiscordOwnedString>,
-    large_text: Option<DiscordOwnedString>,
-    small_image: Option<DiscordOwnedString>,
-    small_text: Option<DiscordOwnedString>,
+    _large_image: Option<DiscordOwnedString>,
+    _large_text: Option<DiscordOwnedString>,
+    _small_image: Option<DiscordOwnedString>,
+    _small_text: Option<DiscordOwnedString>,
 }
 
 #[cfg(target_os = "windows")]
@@ -537,10 +475,10 @@ impl DiscordPresenceAssets {
 
         Self {
             assets,
-            large_image: large_image_owned,
-            large_text: large_text_owned,
-            small_image: small_image_owned,
-            small_text: small_text_owned,
+            _large_image: large_image_owned,
+            _large_text: large_text_owned,
+            _small_image: small_image_owned,
+            _small_text: small_text_owned,
         }
     }
 }
@@ -600,9 +538,9 @@ mod ffi {
             }
         }
 
-        pub fn from_str(value: &str) -> Self {
+        pub fn from_mut_bytes(value: &mut Vec<u8>) -> Self {
             Self {
-                ptr: value.as_ptr().cast_mut(),
+                ptr: value.as_mut_ptr(),
                 size: value.len(),
             }
         }

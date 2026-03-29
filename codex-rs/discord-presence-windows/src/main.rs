@@ -506,17 +506,17 @@ unsafe extern "C" fn discord_client_result_callback(
         return;
     }
 
-    let error = unsafe { ffi::Discord_ClientResult_Error(result) };
-    if error == ffi::Discord_Client_Error::DISCORD_CLIENT_ERROR_NONE {
+    let successful = unsafe { ffi::Discord_ClientResult_Successful(result) };
+    if successful {
         return;
     }
 
-    let mut message = ffi::Discord_String::empty();
+    let mut error = ffi::Discord_String::empty();
     unsafe {
-        ffi::Discord_ClientResult_Message(result, &mut message);
+        ffi::Discord_ClientResult_Error(result, &mut error);
     }
     let _ = write_event(&HelperEvent::Error {
-        message: message.to_string_lossy(),
+        message: error.to_string_lossy(),
     });
 }
 
@@ -580,13 +580,6 @@ mod ffi {
         pub opaque: *mut c_void,
     }
 
-    #[repr(i32)]
-    #[allow(non_camel_case_types)]
-    #[derive(Clone, Copy, PartialEq, Eq)]
-    pub enum Discord_Client_Error {
-        DISCORD_CLIENT_ERROR_NONE = 0,
-    }
-
     #[link(name = "discord_partner_sdk")]
     unsafe extern "C" {
         pub fn Discord_RunCallbacks();
@@ -595,12 +588,11 @@ mod ffi {
         pub fn Discord_Client_Disconnect(self_: *mut Discord_Client);
         pub fn Discord_Client_SetApplicationId(self_: *mut Discord_Client, application_id: u64);
         pub fn Discord_Client_ClearRichPresence(self_: *mut Discord_Client);
-        pub fn Discord_ClientResult_Error(self_: *mut Discord_ClientResult)
-        -> Discord_Client_Error;
-        pub fn Discord_ClientResult_Message(
+        pub fn Discord_ClientResult_Error(
             self_: *mut Discord_ClientResult,
             return_value: *mut Discord_String,
         );
+        pub fn Discord_ClientResult_Successful(self_: *mut Discord_ClientResult) -> bool;
         pub fn Discord_Client_UpdateRichPresence(
             self_: *mut Discord_Client,
             activity: *mut Discord_Activity,

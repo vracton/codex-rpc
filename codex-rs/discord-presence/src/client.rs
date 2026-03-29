@@ -30,6 +30,7 @@ pub struct DiscordPresenceRuntimeConfig {
 pub struct DiscordPresenceSnapshot {
     pub details: String,
     pub state: Option<String>,
+    pub small_text: Option<String>,
 }
 
 enum PresenceRequest {
@@ -174,6 +175,7 @@ async fn bridge_task(
                     Some(snapshot) => HelperCommand::SetPresence {
                         details: snapshot.details,
                         state: snapshot.state,
+                        small_text: snapshot.small_text,
                         start_timestamp_seconds: session_started_at,
                     },
                     None => HelperCommand::ClearPresence,

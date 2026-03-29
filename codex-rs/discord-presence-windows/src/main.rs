@@ -20,6 +20,9 @@ use codex_discord_presence::HelperCommand;
 #[cfg(target_os = "windows")]
 use codex_discord_presence::HelperEvent;
 
+#[cfg(target_os = "windows")]
+const MODEL_BADGE_IMAGE: &str = "gpt-54";
+
 #[derive(Debug, Parser)]
 struct Cli {
     #[arg(long = "application-id")]
@@ -75,14 +78,15 @@ fn main() -> Result<()> {
                     HelperCommand::SetPresence {
                         details,
                         state,
+                        small_text,
                         start_timestamp_seconds,
                     } => {
                         if let Err(err) = client.set_presence(
                             &details,
                             state.as_deref(),
+                            small_text.as_deref(),
                             start_timestamp_seconds,
                             cli.large_image.as_deref(),
-                            cli.large_text.as_deref(),
                         ) {
                             write_event(&HelperEvent::Error {
                                 message: err.to_string(),
@@ -130,9 +134,9 @@ impl DiscordPresenceBridge {
         &mut self,
         details: &str,
         state: Option<&str>,
+        small_text: Option<&str>,
         start_timestamp_seconds: u64,
         large_image: Option<&str>,
-        large_text: Option<&str>,
     ) -> Result<()> {
         let mut activity = DiscordActivity::new();
         activity.set_type(DiscordActivityTypes::Playing);
@@ -142,8 +146,13 @@ impl DiscordPresenceBridge {
             activity.set_state(state);
         }
         activity.set_start_timestamp(start_timestamp_seconds);
-        if large_image.is_some() || large_text.is_some() {
-            activity.set_assets(large_image, large_text);
+        if large_image.is_some() || small_text.is_some() {
+            activity.set_assets(
+                large_image,
+                /*large_text*/ None,
+                Some(MODEL_BADGE_IMAGE),
+                small_text,
+            );
         }
         self.client.update_presence(&activity);
         self.client.run_callbacks();
@@ -279,7 +288,13 @@ impl DiscordActivity {
         }
     }
 
-    fn set_assets(&mut self, large_image: Option<&str>, large_text: Option<&str>) {
+    fn set_assets(
+        &mut self,
+        large_image: Option<&str>,
+        large_text: Option<&str>,
+        small_image: Option<&str>,
+        small_text: Option<&str>,
+    ) {
         let mut assets = ffi::Discord_ActivityAssets {
             opaque: ptr::null_mut(),
         };
@@ -292,6 +307,14 @@ impl DiscordActivity {
             if let Some(large_text) = large_text {
                 let mut large_text = ffi::Discord_String::from_str(large_text);
                 ffi::Discord_ActivityAssets_SetLargeText(&mut assets, &mut large_text);
+            }
+            if let Some(small_image) = small_image {
+                let mut small_image = ffi::Discord_String::from_str(small_image);
+                ffi::Discord_ActivityAssets_SetSmallImage(&mut assets, &mut small_image);
+            }
+            if let Some(small_text) = small_text {
+                let mut small_text = ffi::Discord_String::from_str(small_text);
+                ffi::Discord_ActivityAssets_SetSmallText(&mut assets, &mut small_text);
             }
             ffi::Discord_Activity_SetAssets(&mut self.inner, &mut assets);
             ffi::Discord_ActivityAssets_Drop(&mut assets);
@@ -464,6 +487,14 @@ mod ffi {
             value: *mut Discord_String,
         );
         pub fn Discord_ActivityAssets_SetLargeText(
+            self_: *mut Discord_ActivityAssets,
+            value: *mut Discord_String,
+        );
+        pub fn Discord_ActivityAssets_SetSmallImage(
+            self_: *mut Discord_ActivityAssets,
+            value: *mut Discord_String,
+        );
+        pub fn Discord_ActivityAssets_SetSmallText(
             self_: *mut Discord_ActivityAssets,
             value: *mut Discord_String,
         );

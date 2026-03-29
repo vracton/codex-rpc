@@ -45,10 +45,9 @@ Interactive TUI sessions can publish Rich Presence to Discord when Codex is runn
 enabled = true
 application_id = "123456789012345678"
 large_image = "codex"
-large_text = "Codex CLI"
 ```
 
-The Windows helper and vendored Discord SDK live in the repo, but the helper itself must still be built for Windows before WSL-hosted Codex can launch it.
+Codex shows the project root as the main line, token/context usage as the secondary line, and a fixed `gpt-54` small badge whose tooltip reflects the current model and reasoning level. The Windows helper and vendored Discord SDK live in the repo, but the helper itself must still be built for Windows before WSL-hosted Codex can launch it.
 
 ## JSON Schema
 

@@ -12,10 +12,10 @@ impl ChatWidget {
         let location = self.status_line_project_root_name().unwrap_or_else(|| {
             format_directory_display(self.status_line_cwd(), /*max_width*/ None)
         });
-        let model = self
+        let small_text = self
             .status_line_value_for_item(&StatusLineItem::ModelWithReasoning)
             .unwrap_or_else(|| self.model_display_name().to_string());
-        let details = format!("{location} · {model}");
+        let details = location;
 
         let used_tokens = self.status_line_value_for_item(&StatusLineItem::UsedTokens);
         let context = self
@@ -28,6 +28,10 @@ impl ChatWidget {
             (None, None) => None,
         };
 
-        Some(DiscordPresenceSnapshot { details, state })
+        Some(DiscordPresenceSnapshot {
+            details,
+            state,
+            small_text: Some(small_text),
+        })
     }
 }

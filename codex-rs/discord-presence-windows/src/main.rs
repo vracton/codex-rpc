@@ -336,10 +336,7 @@ unsafe extern "C" fn discord_client_result_callback(
         return;
     }
 
-    let mut message = ffi::Discord_String {
-        ptr: ptr::null_mut(),
-        size: 0,
-    };
+    let mut message = ffi::Discord_String::empty();
     unsafe {
         ffi::Discord_ClientResult_Message(result, &mut message);
     }
@@ -359,6 +356,13 @@ mod ffi {
     }
 
     impl Discord_String {
+        pub fn empty() -> Self {
+            Self {
+                ptr: std::ptr::null_mut(),
+                size: 0,
+            }
+        }
+
         pub fn from_str(value: &str) -> Self {
             Self {
                 ptr: value.as_ptr().cast_mut(),

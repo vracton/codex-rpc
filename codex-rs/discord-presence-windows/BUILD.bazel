@@ -1,0 +1,18 @@
+load("//:defs.bzl", "codex_rust_crate", "multiplatform_binaries")
+
+codex_rust_crate(
+    name = "discord-presence-windows",
+    crate_name = "codex_discord_presence_windows",
+    compile_data = glob(
+        [
+            "src/**",
+        ],
+        allow_empty = True,
+    ) + [
+        "//third_party/discord-social-sdk:discord_sdk_windows_runtime",
+    ],
+)
+
+multiplatform_binaries(
+    name = "codex-discord-presence-windows",
+)

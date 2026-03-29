@@ -90,6 +90,8 @@ use codex_core::models_manager::model_presets::HIDE_GPT_5_1_CODEX_MAX_MIGRATION_
 use codex_core::models_manager::model_presets::HIDE_GPT5_1_MIGRATION_PROMPT_CONFIG;
 #[cfg(target_os = "windows")]
 use codex_core::windows_sandbox::WindowsSandboxLevelExt;
+use codex_discord_presence::DiscordPresenceClient;
+use codex_discord_presence::DiscordPresenceRuntimeConfig;
 use codex_features::Feature;
 use codex_otel::SessionTelemetry;
 use codex_protocol::ThreadId;
@@ -992,6 +994,7 @@ pub(crate) struct App {
     primary_session_configured: Option<ThreadSessionState>,
     pending_primary_events: VecDeque<ThreadBufferedEvent>,
     pending_app_server_requests: PendingAppServerRequests,
+    discord_presence: DiscordPresenceClient,
 }
 
 #[derive(Default)]
@@ -3432,6 +3435,41 @@ impl App {
 
         let status_line_invalid_items_warned = Arc::new(AtomicBool::new(false));
         let terminal_title_invalid_items_warned = Arc::new(AtomicBool::new(false));
+        let discord_presence = match config.tui_discord_presence.clone() {
+            Some(discord_presence)
+                if discord_presence.enabled && discord_presence.application_id.is_some() =>
+            {
+                let runtime_config = DiscordPresenceRuntimeConfig {
+                    application_id: discord_presence.application_id.unwrap_or_default(),
+                    large_image: discord_presence.large_image,
+                    large_text: discord_presence.large_text,
+                };
+                match DiscordPresenceClient::new(
+                    runtime_config,
+                    harness_overrides.codex_self_exe.as_deref(),
+                ) {
+                    Ok(client) => client,
+                    Err(err) => {
+                        app_event_tx.send(AppEvent::InsertHistoryCell(Box::new(
+                            crate::history_cell::new_warning_event(format!(
+                                "Discord presence disabled: {err}"
+                            )),
+                        )));
+                        DiscordPresenceClient::disabled()
+                    }
+                }
+            }
+            Some(discord_presence) if discord_presence.enabled => {
+                app_event_tx.send(AppEvent::InsertHistoryCell(Box::new(
+                    crate::history_cell::new_warning_event(
+                        "Discord presence is enabled but missing `tui.discord_presence.application_id`."
+                            .to_string(),
+                    ),
+                )));
+                DiscordPresenceClient::disabled()
+            }
+            _ => DiscordPresenceClient::disabled(),
+        };
 
         let enhanced_keys_supported = tui.enhanced_keys_supported();
         let wait_for_initial_session_configured =
@@ -3595,11 +3633,13 @@ impl App {
             primary_session_configured: None,
             pending_primary_events: VecDeque::new(),
             pending_app_server_requests: PendingAppServerRequests::default(),
+            discord_presence,
         };
         if let Some(started) = initial_started_thread {
             app.enqueue_primary_thread_session(started.session, started.turns)
                 .await?;
         }
+        app.sync_discord_presence();
 
         // On startup, if Agent mode (workspace-write) or ReadOnly is active, warn about world-writable dirs on Windows.
         #[cfg(target_os = "windows")]
@@ -5739,6 +5779,12 @@ impl App {
 
     fn refresh_status_line(&mut self) {
         self.chat_widget.refresh_status_line();
+        self.sync_discord_presence();
+    }
+
+    fn sync_discord_presence(&mut self) {
+        self.discord_presence
+            .update(self.chat_widget.discord_presence_snapshot());
     }
 
     #[cfg(target_os = "windows")]
@@ -8758,6 +8804,7 @@ guardian_approval = true
             primary_session_configured: None,
             pending_primary_events: VecDeque::new(),
             pending_app_server_requests: PendingAppServerRequests::default(),
+            discord_presence: DiscordPresenceClient::disabled(),
         }
     }
 
@@ -8812,6 +8859,7 @@ guardian_approval = true
                 primary_session_configured: None,
                 pending_primary_events: VecDeque::new(),
                 pending_app_server_requests: PendingAppServerRequests::default(),
+                discord_presence: DiscordPresenceClient::disabled(),
             },
             rx,
             op_rx,

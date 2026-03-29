@@ -4,6 +4,7 @@ use crate::config::edit::apply_blocking;
 use crate::config::types::AppToolApproval;
 use crate::config::types::ApprovalsReviewer;
 use crate::config::types::BundledSkillsConfig;
+use crate::config::types::DiscordPresenceToml;
 use crate::config::types::FeedbackConfigToml;
 use crate::config::types::HistoryPersistence;
 use crate::config::types::McpServerToolConfig;
@@ -264,6 +265,7 @@ fn config_toml_deserializes_model_availability_nux() {
             status_line: None,
             terminal_title: None,
             theme: None,
+            discord_presence: None,
             model_availability_nux: ModelAvailabilityNuxConfig {
                 shown_count: HashMap::from([
                     ("gpt-bar".to_string(), 4),
@@ -961,9 +963,54 @@ fn tui_config_missing_notifications_field_defaults_to_enabled() {
             status_line: None,
             terminal_title: None,
             theme: None,
+            discord_presence: None,
             model_availability_nux: ModelAvailabilityNuxConfig::default(),
         }
     );
+}
+
+#[test]
+fn tui_discord_presence_deserializes_from_toml() {
+    let cfg = r#"
+[tui.discord_presence]
+enabled = true
+application_id = "123456789012345678"
+large_image = "codex"
+large_text = "Codex CLI"
+"#;
+
+    let parsed =
+        toml::from_str::<ConfigToml>(cfg).expect("TUI discord presence config should deserialize");
+    let discord_presence = parsed
+        .tui
+        .and_then(|tui| tui.discord_presence)
+        .expect("discord presence config should exist");
+
+    assert_eq!(
+        discord_presence,
+        DiscordPresenceToml {
+            enabled: true,
+            application_id: Some("123456789012345678".to_string()),
+            large_image: Some("codex".to_string()),
+            large_text: Some("Codex CLI".to_string()),
+        }
+    );
+}
+
+#[test]
+fn tui_discord_presence_defaults_disabled() {
+    let cfg = r#"
+[tui.discord_presence]
+"#;
+
+    let parsed = toml::from_str::<ConfigToml>(cfg)
+        .expect("empty TUI discord presence config should deserialize");
+    let discord_presence = parsed
+        .tui
+        .and_then(|tui| tui.discord_presence)
+        .expect("discord presence config should exist");
+
+    assert_eq!(discord_presence, DiscordPresenceToml::default());
 }
 
 #[test]
@@ -4478,6 +4525,7 @@ fn test_precedence_fixture_with_o3_profile() -> std::io::Result<()> {
             tui_status_line: None,
             tui_terminal_title: None,
             tui_theme: None,
+            tui_discord_presence: None,
             otel: OtelConfig::default(),
         },
         o3_profile_config
@@ -4620,6 +4668,7 @@ fn test_precedence_fixture_with_gpt3_profile() -> std::io::Result<()> {
         tui_status_line: None,
         tui_terminal_title: None,
         tui_theme: None,
+        tui_discord_presence: None,
         otel: OtelConfig::default(),
     };
 
@@ -4760,6 +4809,7 @@ fn test_precedence_fixture_with_zdr_profile() -> std::io::Result<()> {
         tui_status_line: None,
         tui_terminal_title: None,
         tui_theme: None,
+        tui_discord_presence: None,
         otel: OtelConfig::default(),
     };
 
@@ -4886,6 +4936,7 @@ fn test_precedence_fixture_with_gpt5_profile() -> std::io::Result<()> {
         tui_status_line: None,
         tui_terminal_title: None,
         tui_theme: None,
+        tui_discord_presence: None,
         otel: OtelConfig::default(),
     };
 

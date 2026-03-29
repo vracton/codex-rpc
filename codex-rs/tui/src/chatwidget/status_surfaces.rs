@@ -305,7 +305,7 @@ impl ChatWidget {
         })
     }
 
-    fn status_line_cwd(&self) -> &Path {
+    pub(super) fn status_line_cwd(&self) -> &Path {
         self.current_cwd
             .as_deref()
             .unwrap_or(self.config.cwd.as_path())
@@ -345,7 +345,7 @@ impl ChatWidget {
     }
 
     /// Returns a cached project-root display name for the active cwd.
-    fn status_line_project_root_name(&mut self) -> Option<String> {
+    pub(super) fn status_line_project_root_name(&mut self) -> Option<String> {
         let cwd = self.status_line_cwd().to_path_buf();
         if let Some(cache) = &self.status_line_project_root_name_cache
             && cache.cwd == cwd

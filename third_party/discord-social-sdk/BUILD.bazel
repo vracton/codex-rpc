@@ -1,0 +1,5 @@
+filegroup(
+    name = "discord_sdk_windows_runtime",
+    srcs = glob(["**"]),
+    visibility = ["//visibility:public"],
+)

@@ -9,6 +9,8 @@ members = [
     "app-server-protocol",
     "app-server-test-client",
     "debug-client",
+    "discord-presence",
+    "discord-presence-windows",
     "apply-patch",
     "arg0",
     "feedback",
@@ -116,6 +118,8 @@ codex-connectors = { path = "connectors" }
 codex-config = { path = "config" }
 codex-core = { path = "core" }
 codex-core-skills = { path = "core-skills" }
+codex-discord-presence = { path = "discord-presence" }
+codex-discord-presence-windows = { path = "discord-presence-windows" }
 codex-exec = { path = "exec" }
 codex-exec-server = { path = "exec-server" }
 codex-execpolicy = { path = "execpolicy" }

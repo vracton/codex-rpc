@@ -786,6 +786,10 @@ pub struct Tui {
     #[serde(default)]
     pub theme: Option<String>,
 
+    /// Optional Discord Rich Presence integration for interactive TUI sessions.
+    #[serde(default)]
+    pub discord_presence: Option<DiscordPresenceToml>,
+
     /// Startup tooltip availability NUX state persisted by the TUI.
     #[serde(default)]
     pub model_availability_nux: ModelAvailabilityNuxConfig,
@@ -793,6 +797,26 @@ pub struct Tui {
 
 const fn default_true() -> bool {
     true
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq, Default, JsonSchema)]
+#[schemars(deny_unknown_fields)]
+pub struct DiscordPresenceToml {
+    /// Enable Discord Rich Presence integration for the TUI.
+    #[serde(default)]
+    pub enabled: bool,
+
+    /// Discord application ID used for Rich Presence.
+    #[serde(default)]
+    pub application_id: Option<String>,
+
+    /// Optional large image asset key configured in the Discord application.
+    #[serde(default)]
+    pub large_image: Option<String>,
+
+    /// Optional hover text for the large image asset.
+    #[serde(default)]
+    pub large_text: Option<String>,
 }
 
 /// Settings for notices we display to users via the tui and app-server clients

@@ -603,6 +603,32 @@
       },
       "type": "object"
     },
+    "DiscordPresenceToml": {
+      "additionalProperties": false,
+      "properties": {
+        "application_id": {
+          "default": null,
+          "description": "Discord application ID used for Rich Presence.",
+          "type": "string"
+        },
+        "enabled": {
+          "default": false,
+          "description": "Enable Discord Rich Presence integration for the TUI.",
+          "type": "boolean"
+        },
+        "large_image": {
+          "default": null,
+          "description": "Optional large image asset key configured in the Discord application.",
+          "type": "string"
+        },
+        "large_text": {
+          "default": null,
+          "description": "Optional hover text for the large image asset.",
+          "type": "string"
+        }
+      },
+      "type": "object"
+    },
     "FeedbackConfigToml": {
       "additionalProperties": false,
       "properties": {
@@ -1669,6 +1695,15 @@
           "default": true,
           "description": "Enable animations (welcome screen, shimmer effects, spinners). Defaults to `true`.",
           "type": "boolean"
+        },
+        "discord_presence": {
+          "allOf": [
+            {
+              "$ref": "#/definitions/DiscordPresenceToml"
+            }
+          ],
+          "default": null,
+          "description": "Optional Discord Rich Presence integration for interactive TUI sessions."
         },
         "model_availability_nux": {
           "allOf": [

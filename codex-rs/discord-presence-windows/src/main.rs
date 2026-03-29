@@ -119,6 +119,7 @@ fn write_event(event: &HelperEvent) -> Result<()> {
 #[cfg(target_os = "windows")]
 struct DiscordPresenceBridge {
     client: DiscordClient,
+    current_activity: Option<DiscordPresenceActivity>,
 }
 
 #[cfg(target_os = "windows")]
@@ -126,7 +127,10 @@ impl DiscordPresenceBridge {
     fn new(application_id: u64) -> Result<Self> {
         let mut client = DiscordClient::new();
         client.set_application_id(application_id);
-        Ok(Self { client })
+        Ok(Self {
+            client,
+            current_activity: None,
+        })
     }
 
     fn set_presence(
@@ -137,28 +141,21 @@ impl DiscordPresenceBridge {
         start_timestamp_seconds: u64,
         large_image: Option<&str>,
     ) -> Result<()> {
-        let mut activity = DiscordActivity::new();
-        activity.set_type(DiscordActivityTypes::Playing);
-        activity.set_details(details);
-        activity.set_status_display_type(DiscordStatusDisplayTypes::Details);
-        if let Some(state) = state {
-            activity.set_state(state);
-        }
-        activity.set_start_timestamp(start_timestamp_seconds);
-        if large_image.is_some() || small_text.is_some() {
-            activity.set_assets(
-                large_image,
-                /*large_text*/ None,
-                Some(MODEL_BADGE_IMAGE),
-                small_text,
-            );
-        }
-        self.client.update_presence(&activity);
+        let activity = DiscordPresenceActivity::new(
+            details,
+            state,
+            small_text,
+            start_timestamp_seconds,
+            large_image,
+        );
+        self.client.update_presence(&activity.activity);
+        self.current_activity = Some(activity);
         self.client.run_callbacks();
         Ok(())
     }
 
     fn clear_presence(&mut self) {
+        self.current_activity = None;
         self.client.clear_presence();
         self.client.run_callbacks();
     }
@@ -320,6 +317,230 @@ impl Drop for DiscordActivity {
     fn drop(&mut self) {
         unsafe {
             ffi::Discord_Activity_Drop(&mut self.inner);
+        }
+    }
+}
+
+#[cfg(target_os = "windows")]
+struct DiscordActivityAssets {
+    inner: ffi::Discord_ActivityAssets,
+}
+
+#[cfg(target_os = "windows")]
+impl DiscordActivityAssets {
+    fn new() -> Self {
+        let mut inner = ffi::Discord_ActivityAssets {
+            opaque: ptr::null_mut(),
+        };
+        unsafe {
+            ffi::Discord_ActivityAssets_Init(&mut inner);
+        }
+        Self { inner }
+    }
+
+    fn set_large_image(&mut self, value: &mut DiscordOwnedString) {
+        unsafe {
+            let mut raw = value.raw();
+            ffi::Discord_ActivityAssets_SetLargeImage(&mut self.inner, &mut raw);
+        }
+    }
+
+    fn set_large_text(&mut self, value: &mut DiscordOwnedString) {
+        unsafe {
+            let mut raw = value.raw();
+            ffi::Discord_ActivityAssets_SetLargeText(&mut self.inner, &mut raw);
+        }
+    }
+
+    fn set_small_image(&mut self, value: &mut DiscordOwnedString) {
+        unsafe {
+            let mut raw = value.raw();
+            ffi::Discord_ActivityAssets_SetSmallImage(&mut self.inner, &mut raw);
+        }
+    }
+
+    fn set_small_text(&mut self, value: &mut DiscordOwnedString) {
+        unsafe {
+            let mut raw = value.raw();
+            ffi::Discord_ActivityAssets_SetSmallText(&mut self.inner, &mut raw);
+        }
+    }
+}
+
+#[cfg(target_os = "windows")]
+impl Drop for DiscordActivityAssets {
+    fn drop(&mut self) {
+        unsafe {
+            ffi::Discord_ActivityAssets_Drop(&mut self.inner);
+        }
+    }
+}
+
+#[cfg(target_os = "windows")]
+struct DiscordActivityTimestamps {
+    inner: ffi::Discord_ActivityTimestamps,
+}
+
+#[cfg(target_os = "windows")]
+impl DiscordActivityTimestamps {
+    fn new(start_timestamp_seconds: u64) -> Self {
+        let mut inner = ffi::Discord_ActivityTimestamps {
+            opaque: ptr::null_mut(),
+        };
+        unsafe {
+            ffi::Discord_ActivityTimestamps_Init(&mut inner);
+            ffi::Discord_ActivityTimestamps_SetStart(&mut inner, start_timestamp_seconds);
+        }
+        Self { inner }
+    }
+}
+
+#[cfg(target_os = "windows")]
+impl Drop for DiscordActivityTimestamps {
+    fn drop(&mut self) {
+        unsafe {
+            ffi::Discord_ActivityTimestamps_Drop(&mut self.inner);
+        }
+    }
+}
+
+#[cfg(target_os = "windows")]
+struct DiscordOwnedString {
+    bytes: Vec<u8>,
+}
+
+#[cfg(target_os = "windows")]
+impl DiscordOwnedString {
+    fn new(value: &str) -> Self {
+        Self {
+            bytes: value.as_bytes().to_vec(),
+        }
+    }
+
+    fn raw(&mut self) -> ffi::Discord_String {
+        ffi::Discord_String {
+            ptr: self.bytes.as_mut_ptr(),
+            size: self.bytes.len(),
+        }
+    }
+}
+
+#[cfg(target_os = "windows")]
+struct DiscordPresenceActivity {
+    activity: DiscordActivity,
+    details: DiscordOwnedString,
+    state: Option<DiscordOwnedString>,
+    timestamps: DiscordActivityTimestamps,
+    assets: Option<DiscordPresenceAssets>,
+}
+
+#[cfg(target_os = "windows")]
+impl DiscordPresenceActivity {
+    fn new(
+        details: &str,
+        state: Option<&str>,
+        small_text: Option<&str>,
+        start_timestamp_seconds: u64,
+        large_image: Option<&str>,
+    ) -> Self {
+        let mut activity = DiscordActivity::new();
+        activity.set_type(DiscordActivityTypes::Playing);
+        activity.set_status_display_type(DiscordStatusDisplayTypes::Details);
+
+        let mut details_owned = DiscordOwnedString::new(details);
+        let mut details_raw = details_owned.raw();
+        unsafe {
+            ffi::Discord_Activity_SetDetails(&mut activity.inner, &mut details_raw);
+        }
+
+        let mut state_owned = state.map(DiscordOwnedString::new);
+        if let Some(state_owned) = state_owned.as_mut() {
+            let mut state_raw = state_owned.raw();
+            unsafe {
+                ffi::Discord_Activity_SetState(&mut activity.inner, &mut state_raw);
+            }
+        }
+
+        let timestamps = DiscordActivityTimestamps::new(start_timestamp_seconds);
+        unsafe {
+            ffi::Discord_Activity_SetTimestamps(
+                &mut activity.inner,
+                &timestamps.inner as *const _ as *mut _,
+            );
+        }
+
+        let mut assets = if large_image.is_some() || small_text.is_some() {
+            Some(DiscordPresenceAssets::new(
+                large_image,
+                /*large_text*/ None,
+                Some(MODEL_BADGE_IMAGE),
+                small_text,
+            ))
+        } else {
+            None
+        };
+
+        if let Some(assets) = assets.as_mut() {
+            unsafe {
+                ffi::Discord_Activity_SetAssets(
+                    &mut activity.inner,
+                    &assets.assets.inner as *const _ as *mut _,
+                );
+            }
+        }
+
+        Self {
+            activity,
+            details: details_owned,
+            state: state_owned,
+            timestamps,
+            assets,
+        }
+    }
+}
+
+#[cfg(target_os = "windows")]
+struct DiscordPresenceAssets {
+    assets: DiscordActivityAssets,
+    large_image: Option<DiscordOwnedString>,
+    large_text: Option<DiscordOwnedString>,
+    small_image: Option<DiscordOwnedString>,
+    small_text: Option<DiscordOwnedString>,
+}
+
+#[cfg(target_os = "windows")]
+impl DiscordPresenceAssets {
+    fn new(
+        large_image: Option<&str>,
+        large_text: Option<&str>,
+        small_image: Option<&str>,
+        small_text: Option<&str>,
+    ) -> Self {
+        let mut assets = DiscordActivityAssets::new();
+        let mut large_image_owned = large_image.map(DiscordOwnedString::new);
+        let mut large_text_owned = large_text.map(DiscordOwnedString::new);
+        let mut small_image_owned = small_image.map(DiscordOwnedString::new);
+        let mut small_text_owned = small_text.map(DiscordOwnedString::new);
+
+        if let Some(value) = large_image_owned.as_mut() {
+            assets.set_large_image(value);
+        }
+        if let Some(value) = large_text_owned.as_mut() {
+            assets.set_large_text(value);
+        }
+        if let Some(value) = small_image_owned.as_mut() {
+            assets.set_small_image(value);
+        }
+        if let Some(value) = small_text_owned.as_mut() {
+            assets.set_small_text(value);
+        }
+
+        Self {
+            assets,
+            large_image: large_image_owned,
+            large_text: large_text_owned,
+            small_image: small_image_owned,
+            small_text: small_text_owned,
         }
     }
 }

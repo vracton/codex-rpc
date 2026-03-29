@@ -239,9 +239,7 @@ fn linux_path_to_windows_launch_path(path: &Path) -> Result<PathBuf> {
 
     let distro = env::var("WSL_DISTRO_NAME")
         .context("WSL_DISTRO_NAME is not set; cannot construct Windows path for helper")?;
-    let converted = path_str.replace('/', "\\");
-    let unc_path = format!("\\\\wsl$\\{distro}{converted}");
-    Ok(PathBuf::from(unc_path))
+    Ok(PathBuf::from(wsl_localhost_launch_path(path_str, &distro)))
 }
 
 fn wsl_mount_to_windows_path(path: &str) -> Option<String> {
@@ -258,6 +256,10 @@ fn wsl_mount_to_windows_path(path: &str) -> Option<String> {
     } else {
         format!("{drive_letter}:\\{tail}")
     })
+}
+
+fn wsl_localhost_launch_path(path: &str, distro: &str) -> String {
+    format!("//wsl.localhost/{distro}{path}")
 }
 
 fn pwsh_quote(input: &str) -> String {
@@ -278,6 +280,14 @@ mod tests {
         assert_eq!(
             wsl_mount_to_windows_path("/mnt/c/Users/alice/app.exe"),
             Some("C:\\Users\\alice\\app.exe".to_string())
+        );
+    }
+
+    #[test]
+    fn non_mount_paths_convert_to_wsl_localhost_launch_path() {
+        assert_eq!(
+            wsl_localhost_launch_path("/home/alice/app.exe", "Ubuntu"),
+            "//wsl.localhost/Ubuntu/home/alice/app.exe".to_string()
         );
     }
 

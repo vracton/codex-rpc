@@ -126,7 +126,6 @@ impl DiscordPresenceBridge {
     fn new(application_id: u64) -> Result<Self> {
         let mut client = DiscordClient::new();
         client.set_application_id(application_id);
-        client.connect();
         Ok(Self { client })
     }
 
@@ -189,12 +188,6 @@ impl DiscordClient {
     fn set_application_id(&mut self, application_id: u64) {
         unsafe {
             ffi::Discord_Client_SetApplicationId(&mut self.inner, application_id);
-        }
-    }
-
-    fn connect(&mut self) {
-        unsafe {
-            ffi::Discord_Client_Connect(&mut self.inner);
         }
     }
 
@@ -440,7 +433,6 @@ mod ffi {
         pub fn Discord_RunCallbacks();
         pub fn Discord_Client_Init(self_: *mut Discord_Client);
         pub fn Discord_Client_Drop(self_: *mut Discord_Client);
-        pub fn Discord_Client_Connect(self_: *mut Discord_Client);
         pub fn Discord_Client_Disconnect(self_: *mut Discord_Client);
         pub fn Discord_Client_SetApplicationId(self_: *mut Discord_Client, application_id: u64);
         pub fn Discord_Client_ClearRichPresence(self_: *mut Discord_Client);

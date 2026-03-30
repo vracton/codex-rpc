@@ -2544,6 +2544,7 @@ impl App {
         self.chat_widget
             .set_initial_user_message_submit_suppressed(/*suppressed*/ false);
         self.chat_widget.submit_initial_user_message_if_pending();
+        self.refresh_status_line();
         Ok(())
     }
 
@@ -6369,6 +6370,28 @@ mod tests {
                 text: initial_prompt,
                 text_elements: Vec::new(),
             }])
+        );
+
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn enqueue_primary_thread_session_refreshes_status_line_for_resumed_thread() -> Result<()>
+    {
+        let (mut app, _app_event_rx, _op_rx) = make_test_app_with_channels().await;
+        app.config.tui_status_line =
+            Some(vec!["current-dir".to_string(), "used-tokens".to_string()]);
+        app.chat_widget.refresh_status_line();
+
+        app.enqueue_primary_thread_session(
+            test_thread_session(ThreadId::new(), PathBuf::from("/tmp/resumed-project")),
+            Vec::new(),
+        )
+        .await?;
+
+        assert_eq!(
+            app.chat_widget.status_line_text(),
+            Some("/tmp/resumed-project | 0 used".to_string())
         );
 
         Ok(())

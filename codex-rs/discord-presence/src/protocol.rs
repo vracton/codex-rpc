@@ -7,6 +7,7 @@ pub enum HelperCommand {
     SetPresence {
         details: String,
         state: Option<String>,
+        small_image: Option<String>,
         small_text: Option<String>,
         start_timestamp_seconds: u64,
     },

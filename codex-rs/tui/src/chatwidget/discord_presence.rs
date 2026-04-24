@@ -6,6 +6,9 @@ use crate::status::format_tokens_compact;
 
 use super::ChatWidget;
 
+const DEFAULT_MODEL_BADGE_IMAGE: &str = "gpt-54";
+const GPT_55_MODEL_BADGE_IMAGE: &str = "gpt-55";
+
 impl ChatWidget {
     pub(crate) fn discord_presence_snapshot(&mut self) -> Option<DiscordPresenceSnapshot> {
         self.thread_id?;
@@ -29,7 +32,17 @@ impl ChatWidget {
         Some(DiscordPresenceSnapshot {
             details,
             state,
+            small_image: Some(model_badge_image_for_text(&small_text).to_string()),
             small_text: Some(small_text),
         })
+    }
+}
+
+fn model_badge_image_for_text(model_text: &str) -> &'static str {
+    let model_text = model_text.to_ascii_lowercase();
+    if model_text.contains("gpt-5.5") || model_text.contains("gpt 5.5") {
+        GPT_55_MODEL_BADGE_IMAGE
+    } else {
+        DEFAULT_MODEL_BADGE_IMAGE
     }
 }

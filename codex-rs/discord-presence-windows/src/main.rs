@@ -20,9 +20,6 @@ use codex_discord_presence::HelperCommand;
 #[cfg(target_os = "windows")]
 use codex_discord_presence::HelperEvent;
 
-#[cfg(target_os = "windows")]
-const MODEL_BADGE_IMAGE: &str = "gpt-54";
-
 #[derive(Debug, Parser)]
 struct Cli {
     #[arg(long = "application-id")]
@@ -78,12 +75,14 @@ fn main() -> Result<()> {
                     HelperCommand::SetPresence {
                         details,
                         state,
+                        small_image,
                         small_text,
                         start_timestamp_seconds,
                     } => {
                         if let Err(err) = client.set_presence(
                             &details,
                             state.as_deref(),
+                            small_image.as_deref(),
                             small_text.as_deref(),
                             start_timestamp_seconds,
                             cli.large_image.as_deref(),
@@ -137,6 +136,7 @@ impl DiscordPresenceBridge {
         &mut self,
         details: &str,
         state: Option<&str>,
+        small_image: Option<&str>,
         small_text: Option<&str>,
         start_timestamp_seconds: u64,
         large_image: Option<&str>,
@@ -144,6 +144,7 @@ impl DiscordPresenceBridge {
         let activity = DiscordPresenceActivity::new(
             details,
             state,
+            small_image,
             small_text,
             start_timestamp_seconds,
             large_image,
@@ -377,6 +378,7 @@ impl DiscordPresenceActivity {
     fn new(
         details: &str,
         state: Option<&str>,
+        small_image: Option<&str>,
         small_text: Option<&str>,
         start_timestamp_seconds: u64,
         large_image: Option<&str>,
@@ -407,11 +409,11 @@ impl DiscordPresenceActivity {
             );
         }
 
-        let mut assets = if large_image.is_some() || small_text.is_some() {
+        let mut assets = if large_image.is_some() || small_image.is_some() || small_text.is_some() {
             Some(DiscordPresenceAssets::new(
                 large_image,
                 /*large_text*/ None,
-                Some(MODEL_BADGE_IMAGE),
+                small_image,
                 small_text,
             ))
         } else {

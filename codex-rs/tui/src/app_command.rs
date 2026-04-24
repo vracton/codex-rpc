@@ -1,6 +1,6 @@
 use std::path::PathBuf;
 
-use codex_core::config::types::ApprovalsReviewer;
+use codex_config::types::ApprovalsReviewer;
 use codex_protocol::approvals::ElicitationAction;
 use codex_protocol::config_types::CollaborationMode;
 use codex_protocol::config_types::Personality;
@@ -121,17 +121,9 @@ impl AppCommand {
         Self(Op::RealtimeConversationStart(params))
     }
 
-    #[cfg_attr(
-        any(target_os = "linux", not(feature = "voice-input")),
-        allow(dead_code)
-    )]
+    #[cfg_attr(target_os = "linux", allow(dead_code))]
     pub(crate) fn realtime_conversation_audio(params: ConversationAudioParams) -> Self {
         Self(Op::RealtimeConversationAudio(params))
-    }
-
-    #[allow(dead_code)]
-    pub(crate) fn realtime_conversation_text(params: ConversationTextParams) -> Self {
-        Self(Op::RealtimeConversationText(params))
     }
 
     pub(crate) fn realtime_conversation_close() -> Self {
@@ -158,6 +150,7 @@ impl AppCommand {
     ) -> Self {
         Self(Op::UserTurn {
             items,
+            environments: None,
             cwd,
             approval_policy,
             approvals_reviewer: None,
@@ -191,6 +184,7 @@ impl AppCommand {
             approval_policy,
             approvals_reviewer,
             sandbox_policy,
+            permission_profile: None,
             windows_sandbox_level,
             model,
             effort,
@@ -268,16 +262,6 @@ impl AppCommand {
         Self(Op::Review { review_request })
     }
 
-    #[allow(dead_code)]
-    pub(crate) fn kind(&self) -> &'static str {
-        self.0.kind()
-    }
-
-    #[allow(dead_code)]
-    pub(crate) fn as_core(&self) -> &Op {
-        &self.0
-    }
-
     pub(crate) fn into_core(self) -> Op {
         self.0
     }
@@ -314,6 +298,7 @@ impl AppCommand {
                 final_output_json_schema,
                 collaboration_mode,
                 personality,
+                environments: _,
             } => AppCommandView::UserTurn {
                 items,
                 cwd,
@@ -333,6 +318,7 @@ impl AppCommand {
                 approval_policy,
                 approvals_reviewer,
                 sandbox_policy,
+                permission_profile: _,
                 windows_sandbox_level,
                 model,
                 effort,

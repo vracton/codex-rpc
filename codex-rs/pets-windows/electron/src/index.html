@@ -1,0 +1,43 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self';"
+    />
+    <title>Codex Pets</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <main id="overlay" class="overlay is-idle">
+      <section id="tray" class="notification-tray" aria-live="polite">
+        <article class="notification-card">
+          <div class="notification-copy">
+            <div id="title" class="notification-title">Codex</div>
+            <div id="body" class="notification-body">Thinking</div>
+          </div>
+          <div id="statusIcon" class="status-icon spinner" aria-hidden="true"></div>
+        </article>
+      </section>
+      <button
+        id="collapseButton"
+        class="collapse-button"
+        type="button"
+        aria-label="Collapse activity"
+      >
+        <span class="chevron"></span>
+      </button>
+      <button
+        id="mascotButton"
+        class="mascot-button"
+        type="button"
+        aria-label="Codex pet"
+      >
+        <span id="avatar" class="codex-avatar-root" aria-hidden="true"></span>
+        <span id="badge" class="notification-badge" hidden>1</span>
+      </button>
+    </main>
+    <script src="./renderer.js"></script>
+  </body>
+</html>

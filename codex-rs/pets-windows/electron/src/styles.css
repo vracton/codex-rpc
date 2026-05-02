@@ -1,0 +1,244 @@
+:root {
+  --token-bg-primary: #20202f;
+  --token-bg-elevated: #222230;
+  --token-border: rgba(255, 255, 255, 0.18);
+  --token-text-primary: #d9def8;
+  --token-text-secondary: #c8cdf0;
+  --token-green: #44db7a;
+  --token-badge-bg: #3d3859;
+  --token-badge-fg: #e8e9ff;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  width: 356px;
+  height: 320px;
+  margin: 0;
+  overflow: hidden;
+  background: transparent;
+  color: var(--token-text-primary);
+  font-family:
+    Carlito,
+    "Segoe UI",
+    sans-serif;
+  user-select: none;
+}
+
+body {
+  -webkit-app-region: no-drag;
+}
+
+.overlay {
+  position: relative;
+  width: 356px;
+  height: 320px;
+  background: transparent;
+  -webkit-app-region: drag;
+}
+
+.notification-tray {
+  position: absolute;
+  left: 80px;
+  top: 56px;
+  width: 276px;
+  min-height: 92px;
+  transform-origin: bottom right;
+  transition:
+    opacity 120ms ease-out,
+    transform 160ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.is-idle .notification-tray,
+.is-collapsed .notification-tray {
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(8px) scale(0.96);
+}
+
+.notification-card {
+  position: relative;
+  min-height: 92px;
+  padding: 15px 54px 14px 20px;
+  overflow: hidden;
+  border: 1px solid var(--token-border);
+  border-radius: 28px;
+  background: var(--token-bg-primary);
+  box-shadow:
+    0 18px 36px rgba(0, 0, 0, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.05);
+}
+
+.notification-title,
+.notification-body {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.notification-title {
+  font-size: 25px;
+  line-height: 31px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+.notification-body {
+  margin-top: 1px;
+  color: var(--token-text-secondary);
+  font-size: 24px;
+  line-height: 30px;
+  font-weight: 400;
+}
+
+.status-icon {
+  position: absolute;
+  top: 20px;
+  right: 22px;
+  width: 22px;
+  height: 22px;
+}
+
+.status-icon.spinner {
+  border: 3px solid rgba(203, 209, 240, 0.28);
+  border-top-color: #aeb6de;
+  border-radius: 999px;
+  animation: spin 900ms linear infinite;
+}
+
+.status-icon.check,
+.status-icon.failed {
+  display: grid;
+  place-items: center;
+  border-radius: 999px;
+  color: #102018;
+  font-weight: 900;
+}
+
+.status-icon.check {
+  background: var(--token-green);
+}
+
+.status-icon.failed {
+  background: #ff6b6b;
+}
+
+.status-icon.check::before {
+  content: "";
+  width: 10px;
+  height: 6px;
+  border-left: 3px solid currentColor;
+  border-bottom: 3px solid currentColor;
+  transform: translateY(-1px) rotate(-45deg);
+}
+
+.status-icon.failed::before {
+  content: "!";
+  font-size: 17px;
+  line-height: 1;
+}
+
+.collapse-button {
+  position: absolute;
+  top: 176px;
+  right: 0;
+  z-index: 20;
+  display: grid;
+  width: 55px;
+  height: 55px;
+  place-items: center;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 999px;
+  background: #2c2d40;
+  box-shadow: 0 12px 20px rgba(0, 0, 0, 0.22);
+  color: #aeb5d4;
+  opacity: 1;
+  transition:
+    opacity 120ms ease-out,
+    transform 120ms ease-out;
+  -webkit-app-region: no-drag;
+}
+
+.is-idle .collapse-button {
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(8px);
+}
+
+.chevron {
+  width: 16px;
+  height: 16px;
+  border-right: 3px solid currentColor;
+  border-bottom: 3px solid currentColor;
+  transform: translateY(-3px) rotate(45deg);
+  transition: transform 120ms ease-out;
+}
+
+.is-collapsed .chevron {
+  transform: translateY(3px) rotate(225deg);
+}
+
+.mascot-button {
+  position: absolute;
+  left: 244px;
+  top: 191px;
+  z-index: 10;
+  width: 112px;
+  height: 121px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: grab;
+  -webkit-app-region: no-drag;
+}
+
+.mascot-button:active {
+  cursor: grabbing;
+}
+
+.codex-avatar-root {
+  position: absolute;
+  inset: 0;
+  aspect-ratio: 192 / 208;
+  width: 112px;
+  image-rendering: pixelated;
+  background-repeat: no-repeat;
+  background-size: 800% 900%;
+  transition: transform 120ms ease-out;
+}
+
+.mascot-button:hover .codex-avatar-root {
+  transform: translateY(-2px);
+}
+
+.notification-badge {
+  position: absolute;
+  top: -17px;
+  right: -12px;
+  display: grid;
+  min-width: 55px;
+  height: 55px;
+  padding: 0 14px;
+  place-items: center;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 999px;
+  background: var(--token-badge-bg);
+  color: var(--token-badge-fg);
+  font-size: 24px;
+  line-height: 1;
+  font-weight: 700;
+  box-shadow: 0 12px 20px rgba(0, 0, 0, 0.22);
+}
+
+.is-idle .notification-badge {
+  display: none;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}

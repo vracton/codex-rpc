@@ -32,6 +32,8 @@ pub struct HelperSnapshot {
     pub title: String,
     pub subtitle: Option<String>,
     pub detail: Option<String>,
+    #[serde(default)]
+    pub notification_count: u32,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -56,6 +58,7 @@ mod tests {
                 title: "rpc-codex".to_string(),
                 subtitle: Some("Thinking".to_string()),
                 detail: Some("Inspecting files".to_string()),
+                notification_count: 0,
             },
         };
 
@@ -63,5 +66,27 @@ mod tests {
         let decoded: HelperCommand = serde_json::from_str(&encoded).expect("deserialize command");
 
         assert_eq!(decoded, command);
+    }
+
+    #[test]
+    fn snapshot_defaults_notification_count() {
+        let decoded: HelperCommand = serde_json::from_str(
+            r#"{"type":"set_snapshot","snapshot":{"pet":"codex","state":"idle","title":"Codex","subtitle":null,"detail":null}}"#,
+        )
+        .expect("deserialize command");
+
+        assert_eq!(
+            decoded,
+            HelperCommand::SetSnapshot {
+                snapshot: HelperSnapshot {
+                    pet: "codex".to_string(),
+                    state: PetState::Idle,
+                    title: "Codex".to_string(),
+                    subtitle: None,
+                    detail: None,
+                    notification_count: 0,
+                },
+            }
+        );
     }
 }

@@ -19,11 +19,37 @@ impl ChatWidget {
             .status_line_value_for_item(&StatusLineItem::ModelWithReasoning)
             .unwrap_or_else(|| self.model_display_name().to_string());
 
+        let state = self.pet_state();
+        let completed_preview = self.last_agent_markdown.as_deref().and_then(|markdown| {
+            markdown
+                .lines()
+                .map(str::trim)
+                .find(|line| !line.is_empty())
+                .map(std::borrow::ToOwned::to_owned)
+        });
+        let subtitle = if state == PetState::Review {
+            completed_preview.or(Some(self.current_status.header.clone()))
+        } else {
+            Some(self.current_status.header.clone())
+        };
+        let detail = if state == PetState::Review {
+            None
+        } else {
+            self.current_status.details.clone().or(Some(model))
+        };
+
         PetsSnapshot {
-            state: self.pet_state(),
-            title,
-            subtitle: Some(self.current_status.header.clone()),
-            detail: self.current_status.details.clone().or(Some(model)),
+            state,
+            title: self
+                .last_rendered_user_message_event
+                .as_ref()
+                .map(|event| event.message.trim())
+                .filter(|message| !message.is_empty())
+                .map(std::borrow::ToOwned::to_owned)
+                .unwrap_or(title),
+            subtitle,
+            detail,
+            notification_count: self.pet_notification_count(),
         }
     }
 
@@ -46,6 +72,15 @@ impl ChatWidget {
             PetState::Review
         } else {
             PetState::Idle
+        }
+    }
+
+    fn pet_notification_count(&self) -> u32 {
+        let count = self.queued_user_messages.len();
+        if self.task_complete_pending || self.last_agent_markdown.is_some() {
+            count.saturating_add(1).try_into().unwrap_or(u32::MAX)
+        } else {
+            count.try_into().unwrap_or(u32::MAX)
         }
     }
 }

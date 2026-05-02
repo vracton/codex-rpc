@@ -18,6 +18,7 @@ use crate::protocol::PetState;
 
 const WINDOWS_HELPER_EXE: &str = "codex-pets-windows.exe";
 const WINDOWS_TARGET_TRIPLE: &str = "x86_64-pc-windows-msvc";
+const ELECTRON_HELPER_DIR: &str = "pets-windows/electron";
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct PetsRuntimeConfig {
@@ -30,6 +31,7 @@ pub struct PetsSnapshot {
     pub title: String,
     pub subtitle: Option<String>,
     pub detail: Option<String>,
+    pub notification_count: u32,
 }
 
 enum PetsRequest {
@@ -91,14 +93,7 @@ impl Drop for PetsClient {
 }
 
 fn helper_command(codex_self_exe: Option<&Path>) -> Result<Command> {
-    let helper_path = resolve_helper_path(codex_self_exe)?;
-    let helper_path = helper_path
-        .to_str()
-        .context("pets helper path is not valid UTF-8")?;
-    let helper_path = pwsh_quote(helper_path);
-    let script =
-        format!("[Console]::InputEncoding = [System.Text.Encoding]::UTF8; & {helper_path}");
-
+    let script = resolve_helper_script(codex_self_exe)?;
     let mut command = Command::new("powershell.exe");
     command
         .stdin(Stdio::piped())
@@ -166,6 +161,7 @@ async fn bridge_task(
                         title: snapshot.title,
                         subtitle: snapshot.subtitle,
                         detail: snapshot.detail,
+                        notification_count: snapshot.notification_count,
                     },
                 }
             }
@@ -190,7 +186,32 @@ async fn bridge_task(
     Ok(())
 }
 
-fn resolve_helper_path(codex_self_exe: Option<&Path>) -> Result<PathBuf> {
+fn resolve_helper_script(codex_self_exe: Option<&Path>) -> Result<String> {
+    let locations = resolve_helper_locations(codex_self_exe)?;
+    let legacy_helper = windows_path_literal(&locations.legacy_helper)?;
+    let electron_app_dir = windows_path_literal(&locations.electron_app_dir)?;
+    let electron_portable = windows_path_literal(&locations.electron_portable)?;
+    let electron_unpacked = windows_path_literal(&locations.electron_unpacked)?;
+    let electron_cmd = windows_path_literal(&locations.electron_cmd)?;
+
+    Ok(format!(
+        "[Console]::InputEncoding = [System.Text.Encoding]::UTF8; \
+         if (Test-Path -LiteralPath {electron_portable}) {{ & {electron_portable} }} \
+         elseif (Test-Path -LiteralPath {electron_unpacked}) {{ & {electron_unpacked} }} \
+         elseif (Test-Path -LiteralPath {electron_cmd}) {{ & {electron_cmd} {electron_app_dir} }} \
+         else {{ & {legacy_helper} }}"
+    ))
+}
+
+struct HelperLocations {
+    legacy_helper: PathBuf,
+    electron_app_dir: PathBuf,
+    electron_portable: PathBuf,
+    electron_unpacked: PathBuf,
+    electron_cmd: PathBuf,
+}
+
+fn resolve_helper_locations(codex_self_exe: Option<&Path>) -> Result<HelperLocations> {
     let Some(codex_self_exe) = codex_self_exe else {
         anyhow::bail!("Codex executable path is unavailable for pets helper lookup");
     };
@@ -207,10 +228,37 @@ fn resolve_helper_path(codex_self_exe: Option<&Path>) -> Result<PathBuf> {
         .join(WINDOWS_TARGET_TRIPLE)
         .join(profile_name)
         .join(WINDOWS_HELPER_EXE);
-    if !helper_path.exists() {
-        anyhow::bail!("pets helper was not found at {}", helper_path.display());
+    let Some(workspace_dir) = target_dir.parent() else {
+        anyhow::bail!("failed to derive workspace directory from Codex executable path");
+    };
+    let electron_app_dir = workspace_dir.join(ELECTRON_HELPER_DIR);
+    if !helper_path.exists() && !electron_app_dir.exists() {
+        anyhow::bail!(
+            "pets helper was not found at {} or {}",
+            helper_path.display(),
+            electron_app_dir.display()
+        );
     }
-    linux_path_to_windows_launch_path(&helper_path)
+
+    Ok(HelperLocations {
+        legacy_helper: linux_path_to_windows_launch_path(&helper_path)?,
+        electron_portable: linux_path_to_windows_launch_path(
+            &electron_app_dir.join("dist").join(WINDOWS_HELPER_EXE),
+        )?,
+        electron_unpacked: linux_path_to_windows_launch_path(
+            &electron_app_dir
+                .join("dist")
+                .join("win-unpacked")
+                .join(WINDOWS_HELPER_EXE),
+        )?,
+        electron_cmd: linux_path_to_windows_launch_path(
+            &electron_app_dir
+                .join("node_modules")
+                .join(".bin")
+                .join("electron.cmd"),
+        )?,
+        electron_app_dir: linux_path_to_windows_launch_path(&electron_app_dir)?,
+    })
 }
 
 fn linux_path_to_windows_launch_path(path: &Path) -> Result<PathBuf> {
@@ -224,6 +272,13 @@ fn linux_path_to_windows_launch_path(path: &Path) -> Result<PathBuf> {
     let distro = env::var("WSL_DISTRO_NAME")
         .context("WSL_DISTRO_NAME is not set; cannot construct Windows path for helper")?;
     Ok(PathBuf::from(wsl_localhost_launch_path(path_str, &distro)))
+}
+
+fn windows_path_literal(path: &Path) -> Result<String> {
+    let path = path
+        .to_str()
+        .context("pets helper path is not valid UTF-8")?;
+    Ok(pwsh_quote(path))
 }
 
 fn wsl_mount_to_windows_path(path: &str) -> Option<String> {

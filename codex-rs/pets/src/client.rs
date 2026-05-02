@@ -196,8 +196,8 @@ fn resolve_helper_script(codex_self_exe: Option<&Path>) -> Result<String> {
 
     Ok(format!(
         "[Console]::InputEncoding = [System.Text.Encoding]::UTF8; \
-         if (Test-Path -LiteralPath {electron_portable}) {{ & {electron_portable} }} \
-         elseif (Test-Path -LiteralPath {electron_unpacked}) {{ & {electron_unpacked} }} \
+         if (Test-Path -LiteralPath {electron_unpacked}) {{ & {electron_unpacked} }} \
+         elseif (Test-Path -LiteralPath {electron_portable}) {{ & {electron_portable} }} \
          elseif (Test-Path -LiteralPath {electron_cmd}) {{ & {electron_cmd} {electron_app_dir} }} \
          else {{ & {legacy_helper} }}"
     ))

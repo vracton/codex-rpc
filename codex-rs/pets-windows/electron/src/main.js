@@ -1,12 +1,21 @@
 const { app, BrowserWindow, ipcMain } = require("electron");
+const fs = require("node:fs");
+const os = require("node:os");
+const path = require("node:path");
 const readline = require("node:readline");
 
 let window = null;
 let lastSnapshot = null;
 let currentPet = "codex";
 let isVisible = false;
+const logPath = path.join(os.tmpdir(), "codex-pets-electron.log");
+
+function log(message) {
+  fs.appendFileSync(logPath, `${new Date().toISOString()} ${message}\n`);
+}
 
 function createWindow() {
+  log("creating transparent overlay window");
   window = new BrowserWindow({
     width: 356,
     height: 320,
@@ -19,7 +28,7 @@ function createWindow() {
     show: false,
     backgroundColor: "#00000000",
     webPreferences: {
-      preload: require("node:path").join(__dirname, "preload.js"),
+      preload: path.join(__dirname, "preload.js"),
       contextIsolation: true,
       nodeIntegration: false,
       backgroundThrottling: false,
@@ -27,17 +36,21 @@ function createWindow() {
   });
 
   window.setAlwaysOnTop(true, "screen-saver");
-  window.loadFile(require("node:path").join(__dirname, "index.html"));
+  window.loadFile(path.join(__dirname, "index.html"));
   window.once("ready-to-show", () => {
+    log("window ready");
     process.stdout.write(JSON.stringify({ type: "ready" }) + "\n");
   });
   window.on("closed", () => {
+    log("window closed");
     window = null;
   });
 }
 
 function show() {
+  log("show command");
   if (window == null) {
+    log("show ignored because window is unavailable");
     return;
   }
   if (!isVisible) {
@@ -58,6 +71,7 @@ function show() {
 }
 
 function hide() {
+  log("hide command");
   isVisible = false;
   if (window != null) {
     window.hide();
@@ -66,6 +80,7 @@ function hide() {
 }
 
 function sendSnapshot(snapshot) {
+  log(`snapshot command: ${JSON.stringify(snapshot)}`);
   lastSnapshot = snapshot;
   currentPet = snapshot.pet || currentPet;
   if (window != null) {
@@ -89,6 +104,7 @@ function handleCommand(command) {
       sendSnapshot(command.snapshot);
       break;
     case "shutdown":
+      log("shutdown command");
       app.quit();
       break;
     default:
@@ -122,11 +138,14 @@ function attachStdin() {
       );
     }
   });
-  rl.on("close", () => app.quit());
+  rl.on("close", () => {
+    log("stdin closed");
+  });
 }
 
 app.disableHardwareAcceleration();
 app.whenReady().then(() => {
+  log("electron app ready");
   createWindow();
   attachStdin();
 });

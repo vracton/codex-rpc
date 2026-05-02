@@ -14,8 +14,8 @@ npm run build
 For development, `npm start` also works from Windows. The Rust pets bridge
 prefers helpers in this order:
 
-1. `pets-windows/electron/dist/codex-pets-windows.exe`
-2. `pets-windows/electron/dist/win-unpacked/codex-pets-windows.exe`
+1. `pets-windows/electron/dist/win-unpacked/codex-pets-windows.exe`
+2. `pets-windows/electron/dist/codex-pets-windows.exe`
 3. `pets-windows/electron/node_modules/.bin/electron.cmd pets-windows/electron`
 4. `target/x86_64-pc-windows-msvc/<profile>/codex-pets-windows.exe`
 

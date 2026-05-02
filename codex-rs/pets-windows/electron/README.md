@@ -21,3 +21,11 @@ prefers helpers in this order:
 
 Run the Node install/build from Windows, not WSL, if you want the dev `.cmd`
 launcher path to be available to PowerShell.
+
+When Codex runs from WSL, the Rust bridge launches Electron through a temporary
+command file instead of stdin because Electron is a Windows GUI process. If the
+Electron helper is built in a separate Windows checkout, set
+`CODEX_PETS_ELECTRON_DIR` to that checkout's `pets-windows/electron` directory.
+This fork also falls back to
+`C:\Users\vract\Documents\codex-rpc\codex-rs\pets-windows\electron` when it
+exists.

@@ -30,6 +30,8 @@ members = [
     "device-key",
     "discord-presence",
     "discord-presence-windows",
+    "pets",
+    "pets-windows",
     "shell-command",
     "shell-escalation",
     "skills",
@@ -153,6 +155,8 @@ codex-core-skills = { path = "core-skills" }
 codex-device-key = { path = "device-key" }
 codex-discord-presence = { path = "discord-presence" }
 codex-discord-presence-windows = { path = "discord-presence-windows" }
+codex-pets = { path = "pets" }
+codex-pets-windows = { path = "pets-windows" }
 codex-exec = { path = "exec" }
 codex-file-system = { path = "file-system" }
 codex-exec-server = { path = "exec-server" }

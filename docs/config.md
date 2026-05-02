@@ -79,6 +79,18 @@ large_image = "codex"
 
 Codex shows the project root as the main line, token/context usage as the secondary line, and a fixed `gpt-54` small badge whose tooltip reflects the current model and reasoning level. The Windows helper and vendored Discord SDK live in the repo, but the helper itself must still be built for Windows before WSL-hosted Codex can launch it.
 
+## Desktop Pets
+
+Interactive TUI sessions can show a draggable Codex desktop pet overlay when Codex is running under WSL on Windows. Configure it under `[tui.pets]`:
+
+```toml
+[tui.pets]
+enabled = true
+selected_pet = "codex"
+```
+
+The built-in pets are `codex`, `dewey`, `fireball`, `rocky`, `seedy`, `stacky`, `bsod`, and `null-signal`. Use `/pets` in the TUI to show or hide the overlay. The Windows helper must be built for Windows before WSL-hosted Codex can launch it.
+
 ## JSON Schema
 
 The generated JSON Schema for `config.toml` lives at `codex-rs/core/config.schema.json`.

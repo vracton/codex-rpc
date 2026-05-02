@@ -3215,6 +3215,30 @@ dependencies = [
 ]
 
 [[package]]
+name = "codex-pets"
+version = "0.128.0"
+dependencies = [
+ "anyhow",
+ "pretty_assertions",
+ "serde",
+ "serde_json",
+ "tokio",
+ "tracing",
+]
+
+[[package]]
+name = "codex-pets-windows"
+version = "0.128.0"
+dependencies = [
+ "anyhow",
+ "clap",
+ "codex-pets",
+ "image",
+ "serde_json",
+ "windows-sys 0.59.0",
+]
+
+[[package]]
 name = "codex-plugin"
 version = "0.128.0"
 dependencies = [
@@ -3615,6 +3639,7 @@ dependencies = [
  "codex-model-provider-info",
  "codex-models-manager",
  "codex-otel",
+ "codex-pets",
  "codex-plugin",
  "codex-protocol",
  "codex-realtime-webrtc",

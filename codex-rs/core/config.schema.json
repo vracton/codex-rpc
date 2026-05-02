@@ -1794,6 +1794,22 @@
       ],
       "type": "string"
     },
+    "PetsToml": {
+      "additionalProperties": false,
+      "properties": {
+        "enabled": {
+          "default": false,
+          "description": "Enable the desktop pet overlay for the TUI.",
+          "type": "boolean"
+        },
+        "selected_pet": {
+          "default": "codex",
+          "description": "Built-in pet sprite to show.",
+          "type": "string"
+        }
+      },
+      "type": "object"
+    },
     "PluginConfig": {
       "additionalProperties": false,
       "properties": {
@@ -2504,6 +2520,15 @@
           ],
           "default": true,
           "description": "Enable desktop notifications from the TUI. Defaults to `true`."
+        },
+        "pets": {
+          "allOf": [
+            {
+              "$ref": "#/definitions/PetsToml"
+            }
+          ],
+          "default": null,
+          "description": "Optional desktop pet overlay integration for interactive TUI sessions."
         },
         "show_tooltips": {
           "default": true,

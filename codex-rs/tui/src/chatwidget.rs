@@ -397,6 +397,7 @@ mod slash_dispatch;
 use self::skills::collect_tool_mentions;
 use self::skills::find_app_mentions;
 use self::skills::find_skill_mentions_with_tool_mentions;
+mod pets;
 mod plugins;
 use self::plugins::PluginsCacheState;
 mod plan_implementation;

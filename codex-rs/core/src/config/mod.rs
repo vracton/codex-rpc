@@ -534,6 +534,9 @@ pub struct Config {
     /// Optional Discord Rich Presence settings for interactive TUI sessions.
     pub tui_discord_presence: Option<codex_config::types::DiscordPresenceToml>,
 
+    /// Optional desktop pet overlay settings for interactive TUI sessions.
+    pub tui_pets: Option<codex_config::types::PetsToml>,
+
     /// Terminal resize-reflow tuning knobs.
     pub terminal_resize_reflow: TerminalResizeReflowConfig,
 
@@ -2995,6 +2998,7 @@ impl Config {
             tui_terminal_title: cfg.tui.as_ref().and_then(|t| t.terminal_title.clone()),
             tui_theme: cfg.tui.as_ref().and_then(|t| t.theme.clone()),
             tui_discord_presence: cfg.tui.as_ref().and_then(|t| t.discord_presence.clone()),
+            tui_pets: cfg.tui.as_ref().and_then(|t| t.pets.clone()),
             terminal_resize_reflow,
             tui_keymap: cfg
                 .tui

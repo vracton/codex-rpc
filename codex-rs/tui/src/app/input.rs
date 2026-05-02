@@ -209,10 +209,20 @@ impl App {
     pub(super) fn refresh_status_line(&mut self) {
         self.chat_widget.refresh_status_line();
         self.sync_discord_presence();
+        self.sync_pets();
     }
 
     pub(super) fn sync_discord_presence(&mut self) {
         self.discord_presence
             .update(self.chat_widget.discord_presence_snapshot());
+    }
+
+    pub(super) fn toggle_pets(&mut self) {
+        self.sync_pets();
+        self.pets.toggle();
+    }
+
+    pub(super) fn sync_pets(&mut self) {
+        self.pets.update(self.chat_widget.pets_snapshot());
     }
 }

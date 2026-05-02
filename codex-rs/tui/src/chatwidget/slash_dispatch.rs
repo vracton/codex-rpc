@@ -372,6 +372,9 @@ impl ChatWidget {
             SlashCommand::Theme => {
                 self.open_theme_picker();
             }
+            SlashCommand::Pets => {
+                self.app_event_tx.send(AppEvent::TogglePets);
+            }
             SlashCommand::Ps => {
                 self.add_ps_output();
             }
@@ -842,6 +845,7 @@ impl ChatWidget {
             | SlashCommand::Mcp
             | SlashCommand::Apps
             | SlashCommand::Plugins
+            | SlashCommand::Pets
             | SlashCommand::Rollout
             | SlashCommand::Copy
             | SlashCommand::Diff

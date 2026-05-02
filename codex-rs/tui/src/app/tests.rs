@@ -3755,6 +3755,7 @@ async fn make_test_app() -> App {
         pending_app_server_requests: PendingAppServerRequests::default(),
         pending_plugin_enabled_writes: HashMap::new(),
         discord_presence: DiscordPresenceClient::disabled(),
+        pets: codex_pets::PetsClient::disabled(),
     }
 }
 
@@ -3816,6 +3817,7 @@ async fn make_test_app_with_channels() -> (
             pending_app_server_requests: PendingAppServerRequests::default(),
             pending_plugin_enabled_writes: HashMap::new(),
             discord_presence: DiscordPresenceClient::disabled(),
+            pets: codex_pets::PetsClient::disabled(),
         },
         rx,
         op_rx,

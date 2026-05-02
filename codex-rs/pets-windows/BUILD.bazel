@@ -1,0 +1,11 @@
+load("//:defs.bzl", "codex_rust_crate", "multiplatform_binaries")
+
+codex_rust_crate(
+    name = "pets-windows",
+    crate_name = "codex_pets_windows",
+    compile_data = glob(["assets/**"]),
+)
+
+multiplatform_binaries(
+    name = "codex-pets-windows",
+)

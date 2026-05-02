@@ -555,6 +555,7 @@ fn config_toml_deserializes_model_availability_nux() {
             terminal_title: None,
             theme: None,
             discord_presence: None,
+            pets: None,
             keymap: TuiKeymap::default(),
             model_availability_nux: ModelAvailabilityNuxConfig {
                 shown_count: HashMap::from([
@@ -2069,6 +2070,7 @@ fn tui_config_missing_notifications_field_defaults_to_enabled() {
             terminal_title: None,
             theme: None,
             discord_presence: None,
+            pets: None,
             keymap: TuiKeymap::default(),
             model_availability_nux: ModelAvailabilityNuxConfig::default(),
             terminal_resize_reflow_max_rows: None,
@@ -6424,6 +6426,7 @@ async fn test_precedence_fixture_with_o3_profile() -> std::io::Result<()> {
             tui_terminal_title: None,
             tui_theme: None,
             tui_discord_presence: None,
+            tui_pets: None,
             tui_keymap: TuiKeymap::default(),
             otel: OtelConfig::default(),
         },
@@ -6621,6 +6624,7 @@ async fn test_precedence_fixture_with_gpt3_profile() -> std::io::Result<()> {
         tui_terminal_title: None,
         tui_theme: None,
         tui_discord_presence: None,
+        tui_pets: None,
         tui_keymap: TuiKeymap::default(),
         otel: OtelConfig::default(),
     };
@@ -6772,6 +6776,7 @@ async fn test_precedence_fixture_with_zdr_profile() -> std::io::Result<()> {
         tui_terminal_title: None,
         tui_theme: None,
         tui_discord_presence: None,
+        tui_pets: None,
         tui_keymap: TuiKeymap::default(),
         otel: OtelConfig::default(),
     };
@@ -6908,6 +6913,7 @@ async fn test_precedence_fixture_with_gpt5_profile() -> std::io::Result<()> {
         tui_terminal_title: None,
         tui_theme: None,
         tui_discord_presence: None,
+        tui_pets: None,
         tui_keymap: TuiKeymap::default(),
         otel: OtelConfig::default(),
     };

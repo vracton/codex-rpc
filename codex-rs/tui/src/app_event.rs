@@ -120,6 +120,8 @@ pub(crate) enum KeymapEditIntent {
 pub(crate) enum AppEvent {
     /// Open the agent picker for switching active threads.
     OpenAgentPicker,
+    /// Toggle the desktop pet overlay.
+    TogglePets,
     /// Switch the active thread to the selected agent.
     SelectAgentThread(ThreadId),
 

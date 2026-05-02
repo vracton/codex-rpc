@@ -127,6 +127,8 @@ use codex_features::Feature;
 use codex_models_manager::model_presets::HIDE_GPT_5_1_CODEX_MAX_MIGRATION_PROMPT_CONFIG;
 use codex_models_manager::model_presets::HIDE_GPT5_1_MIGRATION_PROMPT_CONFIG;
 use codex_otel::SessionTelemetry;
+use codex_pets::PetsClient;
+use codex_pets::PetsRuntimeConfig;
 use codex_protocol::ThreadId;
 use codex_protocol::approvals::ExecApprovalRequestEvent;
 use codex_protocol::config_types::Personality;
@@ -586,6 +588,7 @@ pub(crate) struct App {
     // cwd contexts.
     pending_plugin_enabled_writes: HashMap<String, Option<bool>>,
     discord_presence: DiscordPresenceClient,
+    pets: PetsClient,
 }
 
 fn active_turn_not_steerable_turn_error(error: &TypedRequestError) -> Option<AppServerTurnError> {
@@ -809,6 +812,25 @@ impl App {
             }
             _ => DiscordPresenceClient::disabled(),
         };
+        let pets = match config.tui_pets.clone() {
+            Some(pets) if pets.enabled => {
+                let runtime_config = PetsRuntimeConfig {
+                    selected_pet: pets.selected_pet,
+                };
+                match PetsClient::new(runtime_config, harness_overrides.codex_self_exe.as_deref()) {
+                    Ok(client) => client,
+                    Err(err) => {
+                        app_event_tx.send(AppEvent::InsertHistoryCell(Box::new(
+                            crate::history_cell::new_warning_event(format!(
+                                "Pets overlay disabled: {err}"
+                            )),
+                        )));
+                        PetsClient::disabled()
+                    }
+                }
+            }
+            _ => PetsClient::disabled(),
+        };
 
         let enhanced_keys_supported = tui.enhanced_keys_supported();
         let wait_for_initial_session_configured =
@@ -983,12 +1005,14 @@ See the Codex keymap documentation for supported actions and examples."
             pending_app_server_requests: PendingAppServerRequests::default(),
             pending_plugin_enabled_writes: HashMap::new(),
             discord_presence,
+            pets,
         };
         if let Some(started) = initial_started_thread {
             app.enqueue_primary_thread_session(started.session, started.turns)
                 .await?;
         }
         app.sync_discord_presence();
+        app.sync_pets();
 
         // On startup, if a managed filesystem sandbox is active, warn about
         // world-writable dirs on Windows.

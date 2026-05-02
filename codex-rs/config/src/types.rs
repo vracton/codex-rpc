@@ -647,6 +647,10 @@ pub struct Tui {
     #[serde(default)]
     pub discord_presence: Option<DiscordPresenceToml>,
 
+    /// Optional desktop pet overlay integration for interactive TUI sessions.
+    #[serde(default)]
+    pub pets: Option<PetsToml>,
+
     /// Keybinding overrides for the TUI.
     ///
     /// This supports rebinding selected actions globally and by context.
@@ -688,6 +692,31 @@ pub struct DiscordPresenceToml {
     /// Optional hover text for the large image asset.
     #[serde(default)]
     pub large_text: Option<String>,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq, JsonSchema)]
+#[schemars(deny_unknown_fields)]
+pub struct PetsToml {
+    /// Enable the desktop pet overlay for the TUI.
+    #[serde(default)]
+    pub enabled: bool,
+
+    /// Built-in pet sprite to show.
+    #[serde(default = "default_pet")]
+    pub selected_pet: String,
+}
+
+impl Default for PetsToml {
+    fn default() -> Self {
+        Self {
+            enabled: false,
+            selected_pet: default_pet(),
+        }
+    }
+}
+
+fn default_pet() -> String {
+    "codex".to_string()
 }
 
 /// Settings for notices we display to users via the tui and app-server clients

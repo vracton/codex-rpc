@@ -47,6 +47,7 @@ pub enum SlashCommand {
     Title,
     Statusline,
     Theme,
+    #[strum(to_string = "pet")]
     Pets,
     Mcp,
     Apps,
@@ -272,5 +273,11 @@ mod tests {
             SlashCommand::from_str("autoreview"),
             Ok(SlashCommand::AutoReview)
         );
+    }
+
+    #[test]
+    fn pet_command_is_canonical_name() {
+        assert_eq!(SlashCommand::Pets.command(), "pet");
+        assert_eq!(SlashCommand::from_str("pet"), Ok(SlashCommand::Pets));
     }
 }

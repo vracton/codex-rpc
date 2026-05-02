@@ -59,7 +59,6 @@ mod windows_app {
     use windows_sys::Win32::System::LibraryLoader::GetModuleHandleW;
     use windows_sys::Win32::UI::Input::KeyboardAndMouse::ReleaseCapture;
     use windows_sys::Win32::UI::WindowsAndMessaging::CREATESTRUCTW;
-    use windows_sys::Win32::UI::WindowsAndMessaging::CW_USEDEFAULT;
     use windows_sys::Win32::UI::WindowsAndMessaging::CreateWindowExW;
     use windows_sys::Win32::UI::WindowsAndMessaging::DefWindowProcW;
     use windows_sys::Win32::UI::WindowsAndMessaging::DestroyWindow;
@@ -83,7 +82,6 @@ mod windows_app {
     use windows_sys::Win32::UI::WindowsAndMessaging::SW_HIDE;
     use windows_sys::Win32::UI::WindowsAndMessaging::SW_SHOWNOACTIVATE;
     use windows_sys::Win32::UI::WindowsAndMessaging::SWP_NOACTIVATE;
-    use windows_sys::Win32::UI::WindowsAndMessaging::SWP_NOMOVE;
     use windows_sys::Win32::UI::WindowsAndMessaging::SWP_NOSIZE;
     use windows_sys::Win32::UI::WindowsAndMessaging::SetForegroundWindow;
     use windows_sys::Win32::UI::WindowsAndMessaging::SetLayeredWindowAttributes;
@@ -109,6 +107,8 @@ mod windows_app {
 
     const WINDOW_WIDTH: i32 = 356;
     const WINDOW_HEIGHT: i32 = 320;
+    const WINDOW_INITIAL_X: i32 = 160;
+    const WINDOW_INITIAL_Y: i32 = 160;
     const MASCOT_WIDTH: i32 = 112;
     const MASCOT_HEIGHT: i32 = 121;
     const CARD_LEFT: i32 = 80;
@@ -246,7 +246,7 @@ mod windows_app {
                         if self.visible {
                             self.hide()?;
                         } else {
-                            self.show();
+                            self.show()?;
                         }
                     }
                     HelperCommand::Hide => self.hide()?,
@@ -267,21 +267,21 @@ mod windows_app {
             Ok(())
         }
 
-        fn show(&mut self) {
+        fn show(&mut self) -> Result<()> {
             self.visible = true;
             unsafe {
                 SetWindowPos(
                     self.hwnd,
                     HWND_TOPMOST,
+                    WINDOW_INITIAL_X,
+                    WINDOW_INITIAL_Y,
                     0,
                     0,
-                    0,
-                    0,
-                    SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE,
+                    SWP_NOSIZE | SWP_NOACTIVATE,
                 );
                 ShowWindow(self.hwnd, SW_SHOWNOACTIVATE);
             }
-            let _ = self.render();
+            self.render()
         }
 
         fn hide(&mut self) -> Result<()> {
@@ -311,7 +311,11 @@ mod windows_app {
         fn on_timer(&mut self) {
             self.drain_commands().ok();
             self.advance_momentum();
-            self.render().ok();
+            if let Err(err) = self.render() {
+                let _ = write_event(&HelperEvent::Error {
+                    message: format!("failed to render pets overlay: {err}"),
+                });
+            }
         }
 
         fn begin_drag(&mut self) {
@@ -469,8 +473,8 @@ mod windows_app {
                 class_name.as_ptr(),
                 title.as_ptr(),
                 WS_POPUP,
-                CW_USEDEFAULT,
-                CW_USEDEFAULT,
+                WINDOW_INITIAL_X,
+                WINDOW_INITIAL_Y,
                 WINDOW_WIDTH,
                 WINDOW_HEIGHT,
                 ptr::null_mut(),

@@ -56,7 +56,6 @@ mod windows_app {
     use windows_sys::Win32::Graphics::Gdi::HGDIOBJ;
     use windows_sys::Win32::Graphics::Gdi::ReleaseDC;
     use windows_sys::Win32::Graphics::Gdi::SelectObject;
-    use windows_sys::Win32::Graphics::Gdi::UpdateLayeredWindow;
     use windows_sys::Win32::System::LibraryLoader::GetModuleHandleW;
     use windows_sys::Win32::UI::Input::KeyboardAndMouse::ReleaseCapture;
     use windows_sys::Win32::UI::WindowsAndMessaging::CREATESTRUCTW;
@@ -94,6 +93,7 @@ mod windows_app {
     use windows_sys::Win32::UI::WindowsAndMessaging::ShowWindow;
     use windows_sys::Win32::UI::WindowsAndMessaging::TranslateMessage;
     use windows_sys::Win32::UI::WindowsAndMessaging::ULW_ALPHA;
+    use windows_sys::Win32::UI::WindowsAndMessaging::UpdateLayeredWindow;
     use windows_sys::Win32::UI::WindowsAndMessaging::WM_DESTROY;
     use windows_sys::Win32::UI::WindowsAndMessaging::WM_LBUTTONDBLCLK;
     use windows_sys::Win32::UI::WindowsAndMessaging::WM_LBUTTONDOWN;
@@ -190,7 +190,7 @@ mod windows_app {
                 detail: None,
             };
             let mut app = Box::new(Self {
-                hwnd: 0,
+                hwnd: ptr::null_mut(),
                 rx,
                 pets,
                 selected_pet: "codex".to_string(),
@@ -212,8 +212,8 @@ mod windows_app {
             }
             loop {
                 self.drain_commands()?;
-                let mut msg = MSG::default();
-                let has_message = unsafe { GetMessageW(&mut msg, 0, 0, 0) };
+                let mut msg: MSG = zeroed();
+                let has_message = unsafe { GetMessageW(&mut msg, ptr::null_mut(), 0, 0) };
                 if has_message == -1 {
                     anyhow::bail!("GetMessageW failed");
                 }
@@ -315,8 +315,8 @@ mod windows_app {
         }
 
         fn begin_drag(&mut self) {
-            let mut cursor = POINT::default();
-            let mut rect = RECT::default();
+            let mut cursor: POINT = zeroed();
+            let mut rect: RECT = zeroed();
             unsafe {
                 GetCursorPos(&mut cursor);
                 GetWindowRect(self.hwnd, &mut rect);
@@ -336,7 +336,7 @@ mod windows_app {
             let Some(drag) = self.dragging.as_mut() else {
                 return;
             };
-            let mut cursor = POINT::default();
+            let mut cursor: POINT = zeroed();
             unsafe {
                 GetCursorPos(&mut cursor);
                 SetWindowPos(
@@ -379,7 +379,7 @@ mod windows_app {
                 self.momentum = None;
                 return;
             }
-            let mut rect = RECT::default();
+            let mut rect: RECT = zeroed();
             unsafe {
                 GetWindowRect(self.hwnd, &mut rect);
                 SetWindowPos(
@@ -455,13 +455,11 @@ mod windows_app {
         let class_name = wide("CodexPetsOverlay");
         let title = wide("Codex Pets");
         let hinstance = unsafe { GetModuleHandleW(ptr::null()) };
-        let wc = WNDCLASSW {
-            lpfnWndProc: Some(window_proc),
-            hInstance: hinstance,
-            lpszClassName: class_name.as_ptr(),
-            hCursor: unsafe { LoadCursorW(0, IDC_ARROW) },
-            ..Default::default()
-        };
+        let mut wc: WNDCLASSW = zeroed();
+        wc.lpfnWndProc = Some(window_proc);
+        wc.hInstance = hinstance;
+        wc.lpszClassName = class_name.as_ptr();
+        wc.hCursor = unsafe { LoadCursorW(ptr::null_mut(), IDC_ARROW) };
         unsafe {
             RegisterClassW(&wc);
         }
@@ -475,13 +473,13 @@ mod windows_app {
                 CW_USEDEFAULT,
                 WINDOW_WIDTH,
                 WINDOW_HEIGHT,
-                0,
-                0 as HMENU,
+                ptr::null_mut(),
+                ptr::null_mut() as HMENU,
                 hinstance,
                 app.cast::<c_void>(),
             )
         };
-        if hwnd == 0 {
+        if hwnd.is_null() {
             anyhow::bail!("failed to create pets overlay window");
         }
         unsafe {
@@ -547,34 +545,37 @@ mod windows_app {
     }
 
     fn update_layered_window(hwnd: HWND, rgba: &[u8], width: i32, height: i32) -> Result<()> {
-        let screen_dc = unsafe { GetDC(0) };
-        if screen_dc == 0 {
+        let screen_dc = unsafe { GetDC(ptr::null_mut()) };
+        if screen_dc.is_null() {
             anyhow::bail!("GetDC failed");
         }
         let mem_dc = unsafe { CreateCompatibleDC(screen_dc) };
-        if mem_dc == 0 {
+        if mem_dc.is_null() {
             unsafe {
-                ReleaseDC(0, screen_dc);
+                ReleaseDC(ptr::null_mut(), screen_dc);
             }
             anyhow::bail!("CreateCompatibleDC failed");
         }
 
-        let mut bitmap_info = BITMAPINFO {
-            bmiHeader: BITMAPINFOHEADER {
-                biSize: std::mem::size_of::<BITMAPINFOHEADER>() as u32,
-                biWidth: width,
-                biHeight: -height,
-                biPlanes: 1,
-                biBitCount: 32,
-                biCompression: BI_RGB,
-                ..Default::default()
-            },
-            ..Default::default()
-        };
+        let mut bitmap_info: BITMAPINFO = zeroed();
+        bitmap_info.bmiHeader.biSize = std::mem::size_of::<BITMAPINFOHEADER>() as u32;
+        bitmap_info.bmiHeader.biWidth = width;
+        bitmap_info.bmiHeader.biHeight = -height;
+        bitmap_info.bmiHeader.biPlanes = 1;
+        bitmap_info.bmiHeader.biBitCount = 32;
+        bitmap_info.bmiHeader.biCompression = BI_RGB;
         let mut bits = ptr::null_mut();
-        let bitmap =
-            unsafe { CreateDIBSection(mem_dc, &bitmap_info, DIB_RGB_COLORS, &mut bits, 0, 0) };
-        if bitmap == 0 || bits.is_null() {
+        let bitmap = unsafe {
+            CreateDIBSection(
+                mem_dc,
+                &bitmap_info,
+                DIB_RGB_COLORS,
+                &mut bits,
+                ptr::null_mut(),
+                0,
+            )
+        };
+        if bitmap.is_null() || bits.is_null() {
             cleanup_gdi(screen_dc, mem_dc, bitmap);
             anyhow::bail!("CreateDIBSection failed");
         }
@@ -593,10 +594,10 @@ mod windows_app {
         };
         let source = POINT { x: 0, y: 0 };
         let blend = BLENDFUNCTION {
-            BlendOp: AC_SRC_OVER,
+            BlendOp: AC_SRC_OVER as u8,
             BlendFlags: 0,
             SourceConstantAlpha: 255,
-            AlphaFormat: AC_SRC_ALPHA,
+            AlphaFormat: AC_SRC_ALPHA as u8,
         };
         let ok = unsafe {
             UpdateLayeredWindow(
@@ -623,14 +624,14 @@ mod windows_app {
 
     fn cleanup_gdi(screen_dc: HDC, mem_dc: HDC, bitmap: HBITMAP) {
         unsafe {
-            if bitmap != 0 {
+            if !bitmap.is_null() {
                 DeleteObject(bitmap as HGDIOBJ);
             }
-            if mem_dc != 0 {
+            if !mem_dc.is_null() {
                 DeleteDC(mem_dc);
             }
-            if screen_dc != 0 {
-                ReleaseDC(0, screen_dc);
+            if !screen_dc.is_null() {
+                ReleaseDC(ptr::null_mut(), screen_dc);
             }
         }
     }
@@ -1067,20 +1068,24 @@ mod windows_app {
     fn find_terminal_window(hint: &str) -> Option<HWND> {
         let exact = wide(hint);
         let hwnd = unsafe { FindWindowW(ptr::null(), exact.as_ptr()) };
-        if hwnd != 0 {
+        if !hwnd.is_null() {
             return Some(hwnd);
         }
         let fallback = wide("Windows Terminal");
         let hwnd = unsafe { FindWindowW(ptr::null(), fallback.as_ptr()) };
-        (hwnd != 0).then_some(hwnd)
+        (!hwnd.is_null()).then_some(hwnd)
     }
 
     fn foreground_window() -> Option<HWND> {
         let hwnd = unsafe { GetForegroundWindow() };
-        (hwnd != 0).then_some(hwnd)
+        (!hwnd.is_null()).then_some(hwnd)
     }
 
     fn wide(value: &str) -> Vec<u16> {
         value.encode_utf16().chain([0]).collect()
+    }
+
+    fn zeroed<T>() -> T {
+        unsafe { std::mem::zeroed() }
     }
 }

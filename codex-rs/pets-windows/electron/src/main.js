@@ -9,9 +9,18 @@ let lastSnapshot = null;
 let currentPet = "codex";
 let isVisible = false;
 const logPath = path.join(os.tmpdir(), "codex-pets-electron.log");
+const commandFilePath = argValue("--command-file");
 
 function log(message) {
   fs.appendFileSync(logPath, `${new Date().toISOString()} ${message}\n`);
+}
+
+function argValue(name) {
+  const index = process.argv.indexOf(name);
+  if (index < 0) {
+    return null;
+  }
+  return process.argv[index + 1] || null;
 }
 
 function createWindow() {
@@ -143,11 +152,57 @@ function attachStdin() {
   });
 }
 
+function attachCommandFile(filePath) {
+  let offset = 0;
+  fs.closeSync(fs.openSync(filePath, "a"));
+  log(`watching command file: ${filePath}`);
+
+  setInterval(() => {
+    let stat;
+    try {
+      stat = fs.statSync(filePath);
+    } catch (error) {
+      log(`failed to stat command file: ${error}`);
+      return;
+    }
+    if (stat.size <= offset) {
+      return;
+    }
+
+    let buffer;
+    try {
+      const fd = fs.openSync(filePath, "r");
+      buffer = Buffer.alloc(stat.size - offset);
+      fs.readSync(fd, buffer, 0, buffer.length, offset);
+      fs.closeSync(fd);
+    } catch (error) {
+      log(`failed to read command file: ${error}`);
+      return;
+    }
+    offset = stat.size;
+
+    for (const line of buffer.toString("utf8").split(/\r?\n/)) {
+      if (line.trim() === "") {
+        continue;
+      }
+      try {
+        handleCommand(JSON.parse(line));
+      } catch (error) {
+        log(`failed to handle command file line: ${error}`);
+      }
+    }
+  }, 100);
+}
+
 app.disableHardwareAcceleration();
 app.whenReady().then(() => {
   log("electron app ready");
   createWindow();
-  attachStdin();
+  if (commandFilePath == null) {
+    attachStdin();
+  } else {
+    attachCommandFile(commandFilePath);
+  }
 });
 
 ipcMain.on("hide-pet", hide);

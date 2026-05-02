@@ -19,6 +19,8 @@ use crate::protocol::PetState;
 const WINDOWS_HELPER_EXE: &str = "codex-pets-windows.exe";
 const WINDOWS_TARGET_TRIPLE: &str = "x86_64-pc-windows-msvc";
 const ELECTRON_HELPER_DIR: &str = "pets-windows/electron";
+const WINDOWS_CHECKOUT_ELECTRON_DIR: &str =
+    "/mnt/c/Users/vract/Documents/codex-rpc/codex-rs/pets-windows/electron";
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct PetsRuntimeConfig {
@@ -195,11 +197,24 @@ fn resolve_helper_script(codex_self_exe: Option<&Path>) -> Result<String> {
     let electron_cmd = windows_path_literal(&locations.electron_cmd)?;
 
     Ok(format!(
-        "[Console]::InputEncoding = [System.Text.Encoding]::UTF8; \
-         if (Test-Path -LiteralPath {electron_unpacked}) {{ & {electron_unpacked} }} \
-         elseif (Test-Path -LiteralPath {electron_portable}) {{ & {electron_portable} }} \
-         elseif (Test-Path -LiteralPath {electron_cmd}) {{ & {electron_cmd} {electron_app_dir} }} \
-         else {{ & {legacy_helper} }}"
+        r#"[Console]::InputEncoding = [System.Text.Encoding]::UTF8;
+         $commandFile = Join-Path $env:TEMP ('codex-pets-' + $PID + '.jsonl');
+         Remove-Item -LiteralPath $commandFile -ErrorAction SilentlyContinue;
+         New-Item -ItemType File -Path $commandFile -Force | Out-Null;
+         if (Test-Path -LiteralPath {electron_unpacked}) {{
+             Start-Process -FilePath {electron_unpacked} -ArgumentList @('--command-file', $commandFile) | Out-Null;
+         }} elseif (Test-Path -LiteralPath {electron_portable}) {{
+             Start-Process -FilePath {electron_portable} -ArgumentList @('--command-file', $commandFile) | Out-Null;
+         }} elseif (Test-Path -LiteralPath {electron_cmd}) {{
+             Start-Process -FilePath {electron_cmd} -ArgumentList @({electron_app_dir}, '--command-file', $commandFile) | Out-Null;
+         }} else {{
+             & {legacy_helper};
+             exit $LASTEXITCODE;
+         }}
+         while (($line = [Console]::In.ReadLine()) -ne $null) {{
+             Add-Content -LiteralPath $commandFile -Value $line -Encoding utf8;
+             if ($line -match '\"type\"\s*:\s*\"shutdown\"') {{ break; }}
+         }}"#
     ))
 }
 
@@ -231,7 +246,7 @@ fn resolve_helper_locations(codex_self_exe: Option<&Path>) -> Result<HelperLocat
     let Some(workspace_dir) = target_dir.parent() else {
         anyhow::bail!("failed to derive workspace directory from Codex executable path");
     };
-    let electron_app_dir = workspace_dir.join(ELECTRON_HELPER_DIR);
+    let electron_app_dir = electron_app_dir(workspace_dir);
     if !helper_path.exists() && !electron_app_dir.exists() {
         anyhow::bail!(
             "pets helper was not found at {} or {}",
@@ -259,6 +274,17 @@ fn resolve_helper_locations(codex_self_exe: Option<&Path>) -> Result<HelperLocat
         )?,
         electron_app_dir: linux_path_to_windows_launch_path(&electron_app_dir)?,
     })
+}
+
+fn electron_app_dir(workspace_dir: &Path) -> PathBuf {
+    if let Some(path) = env::var_os("CODEX_PETS_ELECTRON_DIR") {
+        return PathBuf::from(path);
+    }
+    let windows_checkout = PathBuf::from(WINDOWS_CHECKOUT_ELECTRON_DIR);
+    if windows_checkout.exists() {
+        return windows_checkout;
+    }
+    workspace_dir.join(ELECTRON_HELPER_DIR)
 }
 
 fn linux_path_to_windows_launch_path(path: &Path) -> Result<PathBuf> {

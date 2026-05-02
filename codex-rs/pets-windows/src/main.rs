@@ -38,23 +38,13 @@ mod windows_app {
     use windows_sys::Win32::Foundation::POINT;
     use windows_sys::Win32::Foundation::RECT;
     use windows_sys::Win32::Foundation::WPARAM;
-    use windows_sys::Win32::Graphics::Gdi::AC_SRC_ALPHA;
-    use windows_sys::Win32::Graphics::Gdi::AC_SRC_OVER;
     use windows_sys::Win32::Graphics::Gdi::BI_RGB;
     use windows_sys::Win32::Graphics::Gdi::BITMAPINFO;
     use windows_sys::Win32::Graphics::Gdi::BITMAPINFOHEADER;
-    use windows_sys::Win32::Graphics::Gdi::BLENDFUNCTION;
-    use windows_sys::Win32::Graphics::Gdi::CreateCompatibleDC;
-    use windows_sys::Win32::Graphics::Gdi::CreateDIBSection;
     use windows_sys::Win32::Graphics::Gdi::DIB_RGB_COLORS;
-    use windows_sys::Win32::Graphics::Gdi::DeleteDC;
-    use windows_sys::Win32::Graphics::Gdi::DeleteObject;
     use windows_sys::Win32::Graphics::Gdi::GetDC;
-    use windows_sys::Win32::Graphics::Gdi::HBITMAP;
-    use windows_sys::Win32::Graphics::Gdi::HDC;
-    use windows_sys::Win32::Graphics::Gdi::HGDIOBJ;
     use windows_sys::Win32::Graphics::Gdi::ReleaseDC;
-    use windows_sys::Win32::Graphics::Gdi::SelectObject;
+    use windows_sys::Win32::Graphics::Gdi::SetDIBitsToDevice;
     use windows_sys::Win32::System::LibraryLoader::GetModuleHandleW;
     use windows_sys::Win32::UI::Input::KeyboardAndMouse::ReleaseCapture;
     use windows_sys::Win32::UI::WindowsAndMessaging::CREATESTRUCTW;
@@ -87,8 +77,6 @@ mod windows_app {
     use windows_sys::Win32::UI::WindowsAndMessaging::SetWindowPos;
     use windows_sys::Win32::UI::WindowsAndMessaging::ShowWindow;
     use windows_sys::Win32::UI::WindowsAndMessaging::TranslateMessage;
-    use windows_sys::Win32::UI::WindowsAndMessaging::ULW_ALPHA;
-    use windows_sys::Win32::UI::WindowsAndMessaging::UpdateLayeredWindow;
     use windows_sys::Win32::UI::WindowsAndMessaging::WM_DESTROY;
     use windows_sys::Win32::UI::WindowsAndMessaging::WM_LBUTTONDBLCLK;
     use windows_sys::Win32::UI::WindowsAndMessaging::WM_LBUTTONDOWN;
@@ -97,7 +85,6 @@ mod windows_app {
     use windows_sys::Win32::UI::WindowsAndMessaging::WM_NCCREATE;
     use windows_sys::Win32::UI::WindowsAndMessaging::WM_TIMER;
     use windows_sys::Win32::UI::WindowsAndMessaging::WNDCLASSW;
-    use windows_sys::Win32::UI::WindowsAndMessaging::WS_EX_LAYERED;
     use windows_sys::Win32::UI::WindowsAndMessaging::WS_EX_TOOLWINDOW;
     use windows_sys::Win32::UI::WindowsAndMessaging::WS_EX_TOPMOST;
     use windows_sys::Win32::UI::WindowsAndMessaging::WS_POPUP;
@@ -257,6 +244,7 @@ mod windows_app {
                         self.render()?;
                     }
                     HelperCommand::Shutdown => unsafe {
+                        self.visible = false;
                         DestroyWindow(self.hwnd);
                     },
                 }
@@ -307,6 +295,9 @@ mod windows_app {
 
         fn on_timer(&mut self) {
             self.drain_commands().ok();
+            if !self.visible {
+                return;
+            }
             self.advance_momentum();
             if let Err(err) = self.render() {
                 let _ = write_event(&HelperEvent::Error {
@@ -466,7 +457,7 @@ mod windows_app {
         }
         let hwnd = unsafe {
             CreateWindowExW(
-                WS_EX_LAYERED | WS_EX_TOPMOST | WS_EX_TOOLWINDOW,
+                WS_EX_TOPMOST | WS_EX_TOOLWINDOW,
                 class_name.as_ptr(),
                 title.as_ptr(),
                 WS_POPUP,
@@ -543,16 +534,9 @@ mod windows_app {
     }
 
     fn update_layered_window(hwnd: HWND, rgba: &[u8], width: i32, height: i32) -> Result<()> {
-        let screen_dc = unsafe { GetDC(ptr::null_mut()) };
-        if screen_dc.is_null() {
+        let window_dc = unsafe { GetDC(hwnd) };
+        if window_dc.is_null() {
             anyhow::bail!("GetDC failed");
-        }
-        let mem_dc = unsafe { CreateCompatibleDC(screen_dc) };
-        if mem_dc.is_null() {
-            unsafe {
-                ReleaseDC(ptr::null_mut(), screen_dc);
-            }
-            anyhow::bail!("CreateCompatibleDC failed");
         }
 
         let mut bitmap_info: BITMAPINFO = zeroed();
@@ -562,76 +546,37 @@ mod windows_app {
         bitmap_info.bmiHeader.biPlanes = 1;
         bitmap_info.bmiHeader.biBitCount = 32;
         bitmap_info.bmiHeader.biCompression = BI_RGB;
-        let mut bits = ptr::null_mut();
-        let bitmap = unsafe {
-            CreateDIBSection(
-                mem_dc,
-                &bitmap_info,
-                DIB_RGB_COLORS,
-                &mut bits,
-                ptr::null_mut(),
-                0,
-            )
-        };
-        if bitmap.is_null() || bits.is_null() {
-            cleanup_gdi(screen_dc, mem_dc, bitmap);
-            anyhow::bail!("CreateDIBSection failed");
-        }
 
-        let bgra = unsafe { std::slice::from_raw_parts_mut(bits.cast::<u8>(), rgba.len()) };
+        let mut bgra = vec![0_u8; rgba.len()];
         for (dst, src) in bgra.chunks_exact_mut(4).zip(rgba.chunks_exact(4)) {
             dst[0] = src[2];
             dst[1] = src[1];
             dst[2] = src[0];
-            dst[3] = src[3];
+            dst[3] = 255;
         }
-        let old = unsafe { SelectObject(mem_dc, bitmap as HGDIOBJ) };
-        let size = windows_sys::Win32::Foundation::SIZE {
-            cx: width,
-            cy: height,
-        };
-        let source = POINT { x: 0, y: 0 };
-        let blend = BLENDFUNCTION {
-            BlendOp: AC_SRC_OVER as u8,
-            BlendFlags: 0,
-            SourceConstantAlpha: 255,
-            AlphaFormat: AC_SRC_ALPHA as u8,
-        };
         let ok = unsafe {
-            UpdateLayeredWindow(
-                hwnd,
-                screen_dc,
-                ptr::null(),
-                &size,
-                mem_dc,
-                &source,
+            SetDIBitsToDevice(
+                window_dc,
                 0,
-                &blend,
-                ULW_ALPHA,
+                0,
+                width as u32,
+                height as u32,
+                0,
+                0,
+                0,
+                height as u32,
+                bgra.as_ptr().cast(),
+                &bitmap_info,
+                DIB_RGB_COLORS,
             )
         };
         unsafe {
-            SelectObject(mem_dc, old);
+            ReleaseDC(hwnd, window_dc);
         }
-        cleanup_gdi(screen_dc, mem_dc, bitmap);
         if ok == 0 {
-            anyhow::bail!("UpdateLayeredWindow failed");
+            anyhow::bail!("SetDIBitsToDevice failed");
         }
         Ok(())
-    }
-
-    fn cleanup_gdi(screen_dc: HDC, mem_dc: HDC, bitmap: HBITMAP) {
-        unsafe {
-            if !bitmap.is_null() {
-                DeleteObject(bitmap as HGDIOBJ);
-            }
-            if !mem_dc.is_null() {
-                DeleteDC(mem_dc);
-            }
-            if !screen_dc.is_null() {
-                ReleaseDC(ptr::null_mut(), screen_dc);
-            }
-        }
     }
 
     fn load_pets() -> Result<Vec<PetSprite>> {

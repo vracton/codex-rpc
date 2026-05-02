@@ -181,7 +181,8 @@ function attachCommandFile(filePath) {
     }
     offset = stat.size;
 
-    for (const line of buffer.toString("utf8").split(/\r?\n/)) {
+    for (const rawLine of buffer.toString("utf8").split(/\r?\n/)) {
+      const line = rawLine.replace(/^\uFEFF/, "");
       if (line.trim() === "") {
         continue;
       }

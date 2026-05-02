@@ -32,7 +32,6 @@ mod windows_app {
     use codex_pets::protocol::HelperEvent;
     use codex_pets::protocol::HelperSnapshot;
     use codex_pets::protocol::PetState;
-    use windows_sys::Win32::Foundation::COLORREF;
     use windows_sys::Win32::Foundation::HWND;
     use windows_sys::Win32::Foundation::LPARAM;
     use windows_sys::Win32::Foundation::LRESULT;
@@ -74,7 +73,6 @@ mod windows_app {
     use windows_sys::Win32::UI::WindowsAndMessaging::HWND_TOPMOST;
     use windows_sys::Win32::UI::WindowsAndMessaging::IDC_ARROW;
     use windows_sys::Win32::UI::WindowsAndMessaging::KillTimer;
-    use windows_sys::Win32::UI::WindowsAndMessaging::LWA_ALPHA;
     use windows_sys::Win32::UI::WindowsAndMessaging::LoadCursorW;
     use windows_sys::Win32::UI::WindowsAndMessaging::MSG;
     use windows_sys::Win32::UI::WindowsAndMessaging::PostQuitMessage;
@@ -84,7 +82,6 @@ mod windows_app {
     use windows_sys::Win32::UI::WindowsAndMessaging::SWP_NOACTIVATE;
     use windows_sys::Win32::UI::WindowsAndMessaging::SWP_NOSIZE;
     use windows_sys::Win32::UI::WindowsAndMessaging::SetForegroundWindow;
-    use windows_sys::Win32::UI::WindowsAndMessaging::SetLayeredWindowAttributes;
     use windows_sys::Win32::UI::WindowsAndMessaging::SetTimer;
     use windows_sys::Win32::UI::WindowsAndMessaging::SetWindowLongPtrW;
     use windows_sys::Win32::UI::WindowsAndMessaging::SetWindowPos;
@@ -485,9 +482,6 @@ mod windows_app {
         };
         if hwnd.is_null() {
             anyhow::bail!("failed to create pets overlay window");
-        }
-        unsafe {
-            SetLayeredWindowAttributes(hwnd, 0 as COLORREF, 255, LWA_ALPHA);
         }
         Ok(hwnd)
     }

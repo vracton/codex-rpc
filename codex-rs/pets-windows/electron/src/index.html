@@ -11,32 +11,46 @@
   </head>
   <body>
     <main id="overlay" class="overlay is-idle">
-      <section id="tray" class="notification-tray" aria-live="polite">
-        <article class="notification-card">
-          <div class="notification-copy">
-            <div id="title" class="notification-title">Codex</div>
-            <div id="body" class="notification-body">Thinking</div>
+      <section id="contentFrame" class="content-frame">
+        <section id="tray" class="notification-tray" aria-live="polite">
+          <div id="trayInner" class="notification-tray-inner">
+            <article class="notification-card">
+              <button
+                id="notificationAction"
+                class="notification-action"
+                type="button"
+                aria-label="Open notification"
+              >
+                <span class="notification-copy">
+                  <span id="title" class="notification-title">Codex</span>
+                  <span id="body" class="notification-body">Thinking</span>
+                </span>
+              </button>
+              <span id="statusIcon" class="status-icon spinner" aria-hidden="true"></span>
+            </article>
           </div>
-          <div id="statusIcon" class="status-icon spinner" aria-hidden="true"></div>
-        </article>
+        </section>
+        <section id="mascotFrame" class="mascot-frame">
+          <div
+            id="mascotButton"
+            class="mascot-button"
+            role="img"
+            aria-label="Codex pet"
+            data-avatar-mascot="true"
+          >
+            <span id="avatar" class="codex-avatar-root" aria-hidden="true"></span>
+            <button
+              id="badge"
+              class="notification-badge no-drag"
+              type="button"
+              aria-label="Collapse activity"
+              hidden
+            >
+              <span id="badgeContent">1</span>
+            </button>
+          </div>
+        </section>
       </section>
-      <button
-        id="collapseButton"
-        class="collapse-button"
-        type="button"
-        aria-label="Collapse activity"
-      >
-        <span class="chevron"></span>
-      </button>
-      <button
-        id="mascotButton"
-        class="mascot-button"
-        type="button"
-        aria-label="Codex pet"
-      >
-        <span id="avatar" class="codex-avatar-root" aria-hidden="true"></span>
-        <span id="badge" class="notification-badge" hidden>1</span>
-      </button>
     </main>
     <script src="./renderer.js"></script>
   </body>

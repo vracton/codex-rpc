@@ -16,4 +16,7 @@ contextBridge.exposeInMainWorld("codexPets", {
   hide() {
     ipcRenderer.send("hide-pet");
   },
+  openTerminal() {
+    ipcRenderer.send("open-terminal");
+  },
 });

@@ -99,7 +99,7 @@ button {
   display: block;
   width: 100%;
   min-width: 0;
-  padding: 6px 38px 6px 12px;
+  padding: 5px 32px 5px 12px;
   border: 0;
   background: transparent;
   color: inherit;
@@ -124,17 +124,17 @@ button {
 
 .notification-title {
   padding-right: 4px;
-  font-size: 18px;
-  line-height: 17px;
-  font-weight: 650;
+  font-size: 16px;
+  line-height: 16px;
+  font-weight: 640;
   letter-spacing: -0.01em;
 }
 
 .notification-body {
-  max-height: 32px;
-  margin-top: 2px;
-  font-size: 17px;
-  line-height: 16px;
+  max-height: 30px;
+  margin-top: 1px;
+  font-size: 15px;
+  line-height: 15px;
   font-weight: 400;
 }
 
@@ -144,8 +144,8 @@ button {
   right: 4px;
   z-index: 0;
   display: flex;
-  width: 24px;
-  height: 24px;
+  width: 20px;
+  height: 20px;
   align-items: center;
   justify-content: center;
   color: var(--token-text-secondary);
@@ -153,9 +153,9 @@ button {
 }
 
 .status-icon.spinner::before {
-  width: 20px;
-  height: 20px;
-  border: 4px solid rgba(203, 209, 240, 0.25);
+  width: 16px;
+  height: 16px;
+  border: 3px solid rgba(203, 209, 240, 0.25);
   border-top-color: #8f96bc;
   border-radius: 999px;
   animation: spin 900ms linear infinite;
@@ -167,8 +167,8 @@ button {
 }
 
 .status-icon.check-circle::before {
-  width: 20px;
-  height: 20px;
+  width: 16px;
+  height: 16px;
   border-radius: 999px;
   background: currentColor;
   content: "";
@@ -176,8 +176,8 @@ button {
 
 .status-icon.check-circle::after {
   position: absolute;
-  width: 9px;
-  height: 5px;
+  width: 8px;
+  height: 4px;
   border-bottom: 2px solid var(--token-bg-primary);
   border-left: 2px solid var(--token-bg-primary);
   content: "";
@@ -185,8 +185,8 @@ button {
 }
 
 .status-icon.clock::before {
-  width: 18px;
-  height: 18px;
+  width: 15px;
+  height: 15px;
   border: 2px solid currentColor;
   border-radius: 999px;
   content: "";
@@ -207,7 +207,7 @@ button {
 }
 
 .status-icon.warning::before {
-  font-size: 18px;
+  font-size: 15px;
   font-weight: 800;
   line-height: 1;
   content: "!";
@@ -286,12 +286,12 @@ button {
 }
 
 .notification-badge.is-icon-only::before {
-  width: 9px;
-  height: 9px;
-  border-right: 3px solid currentColor;
-  border-bottom: 3px solid currentColor;
+  width: 8px;
+  height: 8px;
+  border-right: 2px solid currentColor;
+  border-bottom: 2px solid currentColor;
   content: "";
-  opacity: 0.8;
+  opacity: 0.72;
   transform: translateY(-2px) rotate(45deg);
 }
 

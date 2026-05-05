@@ -3,6 +3,7 @@ const fs = require("node:fs");
 const os = require("node:os");
 const path = require("node:path");
 const readline = require("node:readline");
+const { execFile } = require("node:child_process");
 
 let window = null;
 let lastSnapshot = null;
@@ -10,6 +11,7 @@ let currentPet = "codex";
 let isVisible = false;
 let dragState = null;
 let inertiaTimer = null;
+let terminalWindowHint = null;
 const logPath = path.join(os.tmpdir(), "codex-pets-electron.log");
 const commandFilePath = argValue("--command-file");
 const WINDOW_SIZE = { width: 356, height: 320 };
@@ -182,6 +184,10 @@ function show() {
     log("show ignored because window is unavailable");
     return;
   }
+  if (isVisible) {
+    hide();
+    return;
+  }
   if (!isVisible) {
     placeInitialWindow();
   }
@@ -219,6 +225,7 @@ function handleCommand(command) {
   switch (command.type) {
     case "show":
       currentPet = command.pet || currentPet;
+      terminalWindowHint = command.terminal_window_hint || terminalWindowHint;
       show();
       break;
     case "hide":
@@ -322,6 +329,65 @@ app.whenReady().then(() => {
 });
 
 ipcMain.on("hide-pet", hide);
+ipcMain.on("open-terminal", () => {
+  const escapedHint = (terminalWindowHint || "").replaceAll("'", "''");
+  const script = `
+    Add-Type @'
+using System;
+using System.Runtime.InteropServices;
+using System.Text;
+public static class Win32 {
+  public delegate bool EnumWindowsProc(IntPtr hWnd, IntPtr lParam);
+  [DllImport("user32.dll")] public static extern bool EnumWindows(EnumWindowsProc lpEnumFunc, IntPtr lParam);
+  [DllImport("user32.dll")] public static extern bool IsWindowVisible(IntPtr hWnd);
+  [DllImport("user32.dll")] public static extern int GetWindowTextLength(IntPtr hWnd);
+  [DllImport("user32.dll")] public static extern int GetWindowText(IntPtr hWnd, StringBuilder lpString, int nMaxCount);
+  [DllImport("user32.dll")] public static extern bool SetForegroundWindow(IntPtr hWnd);
+  [DllImport("user32.dll")] public static extern bool ShowWindow(IntPtr hWnd, int nCmdShow);
+}
+'@
+    $hint = '${escapedHint}'
+    $target = [IntPtr]::Zero
+    if ($hint.Length -gt 0) {
+      [Win32]::EnumWindows({
+        param($hwnd, $lparam)
+        if (-not [Win32]::IsWindowVisible($hwnd)) { return $true }
+        $length = [Win32]::GetWindowTextLength($hwnd)
+        if ($length -le 0) { return $true }
+        $builder = [Text.StringBuilder]::new($length + 1)
+        [void][Win32]::GetWindowText($hwnd, $builder, $builder.Capacity)
+        if ($builder.ToString().Contains($hint)) {
+          $script:target = $hwnd
+          return $false
+        }
+        return $true
+      }, [IntPtr]::Zero) | Out-Null
+    }
+    if ($target -eq [IntPtr]::Zero) {
+      $process = Get-Process WindowsTerminal, wt, pwsh, powershell -ErrorAction SilentlyContinue |
+        Where-Object { $_.MainWindowHandle -ne 0 } |
+        Sort-Object StartTime -Descending |
+        Select-Object -First 1
+      if ($process -ne $null) {
+        $target = $process.MainWindowHandle
+      }
+    }
+    if ($target -ne [IntPtr]::Zero) {
+      [void][Win32]::ShowWindow($target, 5)
+      [void][Win32]::SetForegroundWindow($target)
+    }
+  `;
+  execFile(
+    "powershell.exe",
+    ["-NoProfile", "-WindowStyle", "Hidden", "-Command", script],
+    { windowsHide: true },
+    (error) => {
+      if (error != null) {
+        log(`failed to focus terminal: ${error}`);
+      }
+    },
+  );
+});
 ipcMain.on("pet-drag-start", (_event, payload) => {
   if (window == null) {
     return;

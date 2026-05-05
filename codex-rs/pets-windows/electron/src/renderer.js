@@ -11,7 +11,7 @@ const ASSETS = {
 
 const LAYOUT = {
   mascot: { left: 244, top: 191, width: 112, height: 121 },
-  tray: { left: 80, top: 56, width: 276, height: 131 },
+  tray: { left: 80, top: 70, width: 276, height: 112 },
 };
 const DRAG_THRESHOLD_PX = 4;
 const VELOCITY_SAMPLE_WINDOW_MS = 100;
@@ -62,6 +62,7 @@ let currentAnimationState = null;
 let collapsed = false;
 let lastSnapshot = null;
 let pointerDrag = null;
+let suppressNextClick = false;
 
 applyLayout();
 avatar.style.backgroundImage = `url("${ASSETS.codex}")`;
@@ -203,12 +204,17 @@ function applySnapshot(snapshot) {
   title.textContent = snapshot.title || "Codex";
   body.textContent = snapshot.subtitle || snapshot.detail || mapped.fallbackBody;
   statusIcon.className = `status-icon ${mapped.iconClass}`;
-  badge.style.backgroundColor = mapped.badgeBackground;
-  badge.style.color = mapped.badgeForeground;
   badge.hidden = !hasNotification;
   badgeContent.textContent = collapsed ? String(Math.max(1, notificationCount)) : "";
   badge.classList.toggle("is-icon-only", !collapsed);
   badge.classList.toggle("is-count", collapsed);
+  if (collapsed) {
+    badge.style.backgroundColor = mapped.badgeBackground;
+    badge.style.color = mapped.badgeForeground;
+  } else {
+    badge.style.removeProperty("background-color");
+    badge.style.removeProperty("color");
+  }
   tray.setAttribute("aria-hidden", trayVisible ? "false" : "true");
   tray.style.pointerEvents = trayVisible ? "" : "none";
   overlay.className = `overlay is-${snapshot.state}${collapsed ? " is-collapsed" : ""}`;
@@ -285,6 +291,7 @@ function endDrag(event) {
   pointerDrag = null;
   contentFrame.releasePointerCapture?.(event.pointerId);
   setAnimation(baseMascotState);
+  suppressNextClick = drag.hasMoved;
   window.codexPets.dragEnd({
     shouldHide: false,
     velocity: releaseVelocity(drag, pointerSample(event)),
@@ -295,6 +302,7 @@ contentFrame.addEventListener("pointerdown", (event) => {
   if (
     event.button !== 0 ||
     !(event.target instanceof Element) ||
+    event.target.closest("[data-avatar-mascot='true']") == null ||
     event.target.closest(".no-drag") != null
   ) {
     return;
@@ -380,6 +388,20 @@ mascotButton.addEventListener("contextmenu", (event) => {
 badge.addEventListener("click", (event) => {
   event.stopPropagation();
   toggleTray();
+});
+
+contentFrame.addEventListener("click", (event) => {
+  if (
+    !(event.target instanceof Element) ||
+    event.target.closest(".no-drag") != null
+  ) {
+    return;
+  }
+  if (suppressNextClick) {
+    suppressNextClick = false;
+    return;
+  }
+  window.codexPets.openTerminal();
 });
 
 window.codexPets.onCommand((command) => {

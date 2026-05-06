@@ -210,6 +210,7 @@ pub(super) async fn make_chatwidget_manual(
         recent_auto_review_denials: RecentAutoReviewDenials::default(),
         terminal_title_status_kind: TerminalTitleStatusKind::Working,
         last_agent_markdown: None,
+        live_agent_markdown: String::new(),
         agent_turn_markdowns: Vec::new(),
         visible_user_turn_count: 0,
         copy_history_evicted_by_rollback: false,

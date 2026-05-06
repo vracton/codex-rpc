@@ -220,6 +220,7 @@ mod windows_app {
                     HelperCommand::Show {
                         pet,
                         terminal_window_hint,
+                        terminal_window_handle: _,
                     } => {
                         self.selected_pet = normalized_pet(&pet).to_string();
                         self.snapshot.pet = self.selected_pet.clone();

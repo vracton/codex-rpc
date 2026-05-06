@@ -17,6 +17,7 @@ pub enum HelperCommand {
     Show {
         pet: String,
         terminal_window_hint: Option<String>,
+        terminal_window_handle: Option<u64>,
     },
     Hide,
     SetSnapshot {

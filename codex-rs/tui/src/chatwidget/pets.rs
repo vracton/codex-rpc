@@ -27,6 +27,13 @@ impl ChatWidget {
                 .find(|line| !line.is_empty())
                 .map(std::borrow::ToOwned::to_owned)
         });
+        let live_preview = self
+            .live_agent_markdown
+            .lines()
+            .map(str::trim)
+            .rev()
+            .find(|line| !line.is_empty())
+            .map(std::borrow::ToOwned::to_owned);
         let current_status_header = if state != PetState::Running
             && self.current_status.header.eq_ignore_ascii_case("working")
         {
@@ -34,7 +41,9 @@ impl ChatWidget {
         } else {
             Some(self.current_status.header.clone())
         };
-        let subtitle = if state == PetState::Review {
+        let subtitle = if state == PetState::Running {
+            live_preview.or(current_status_header)
+        } else if state == PetState::Review {
             completed_preview
                 .or(current_status_header)
                 .or_else(|| Some("Ready".to_string()))

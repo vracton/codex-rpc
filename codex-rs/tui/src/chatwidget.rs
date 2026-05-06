@@ -845,6 +845,8 @@ pub(crate) struct ChatWidget {
     /// Raw markdown of the most recently completed agent response that
     /// survived any local thread rollback.
     last_agent_markdown: Option<String>,
+    /// Raw markdown accumulated from live assistant deltas for the active turn.
+    live_agent_markdown: String,
     /// Copyable agent responses keyed by the number of visible user turns at
     /// the time the response completed.
     agent_turn_markdowns: Vec<AgentTurnMarkdown>,
@@ -2316,6 +2318,7 @@ impl ChatWidget {
             }
         }
         self.last_agent_markdown = Some(markdown);
+        self.live_agent_markdown.clear();
         self.copy_history_evicted_by_rollback = false;
         self.saw_copy_source_this_turn = true;
     }
@@ -2341,6 +2344,7 @@ impl ChatWidget {
         fork_parent_title: Option<String>,
     ) {
         self.last_agent_markdown = None;
+        self.live_agent_markdown.clear();
         self.agent_turn_markdowns.clear();
         self.visible_user_turn_count = 0;
         self.copy_history_evicted_by_rollback = false;
@@ -4844,6 +4848,7 @@ impl ChatWidget {
         if let Some(controller) = self.stream_controller.as_mut()
             && controller.push(&delta)
         {
+            self.live_agent_markdown.push_str(&delta);
             self.app_event_tx.send(AppEvent::StartCommitAnimation);
             self.run_catch_up_commit_tick();
         }
@@ -5342,6 +5347,7 @@ impl ChatWidget {
             agent_turn_running: false,
             mcp_startup_status: None,
             last_agent_markdown: None,
+            live_agent_markdown: String::new(),
             agent_turn_markdowns: Vec::new(),
             visible_user_turn_count: 0,
             copy_history_evicted_by_rollback: false,

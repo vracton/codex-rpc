@@ -21,6 +21,16 @@ const WINDOWS_TARGET_TRIPLE: &str = "x86_64-pc-windows-msvc";
 const ELECTRON_HELPER_DIR: &str = "pets-windows/electron";
 const WINDOWS_CHECKOUT_ELECTRON_DIR: &str =
     "/mnt/c/Users/vract/Documents/codex-rpc/codex-rs/pets-windows/electron";
+const GET_FOREGROUND_WINDOW_SCRIPT: &str = r#"
+Add-Type @'
+using System;
+using System.Runtime.InteropServices;
+public static class CodexWin32 {
+    [DllImport("user32.dll")] public static extern IntPtr GetForegroundWindow();
+}
+'@
+[CodexWin32]::GetForegroundWindow().ToInt64()
+"#;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct PetsRuntimeConfig {
@@ -150,6 +160,7 @@ async fn bridge_task(
             PetsRequest::Toggle => HelperCommand::Show {
                 pet: config.selected_pet.clone(),
                 terminal_window_hint: terminal_window_hint.clone(),
+                terminal_window_handle: foreground_window_handle().await,
             },
             PetsRequest::Update(snapshot) => {
                 if Some(&snapshot) == last_snapshot.as_ref() {
@@ -186,6 +197,29 @@ async fn bridge_task(
         anyhow::bail!("pets helper exited with status {status}");
     }
     Ok(())
+}
+
+async fn foreground_window_handle() -> Option<u64> {
+    let output = Command::new("powershell.exe")
+        .args([
+            "-NoProfile",
+            "-WindowStyle",
+            "Hidden",
+            "-Command",
+            GET_FOREGROUND_WINDOW_SCRIPT,
+        ])
+        .output()
+        .await
+        .ok()?;
+    if !output.status.success() {
+        return None;
+    }
+    String::from_utf8(output.stdout)
+        .ok()?
+        .trim()
+        .parse::<u64>()
+        .ok()
+        .filter(|handle| *handle > 0)
 }
 
 fn resolve_helper_script(codex_self_exe: Option<&Path>) -> Result<String> {

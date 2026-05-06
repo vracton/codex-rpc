@@ -149,30 +149,6 @@ function runPowerShell(script, callback) {
   );
 }
 
-function captureTerminalWindow() {
-  const script = `
-Add-Type @'
-using System;
-using System.Runtime.InteropServices;
-public static class Win32 {
-  [DllImport("user32.dll")] public static extern IntPtr GetForegroundWindow();
-}
-'@
-[Win32]::GetForegroundWindow().ToInt64()
-`;
-  runPowerShell(script, (error, stdout) => {
-    if (error != null) {
-      log(`failed to capture foreground window: ${error}`);
-      return;
-    }
-    const handle = Number.parseInt(String(stdout).trim(), 10);
-    if (Number.isSafeInteger(handle) && handle > 0) {
-      terminalWindowHandle = handle;
-      log(`captured terminal window handle: ${terminalWindowHandle}`);
-    }
-  });
-}
-
 function focusTerminalWindow() {
   if (!Number.isSafeInteger(terminalWindowHandle) || terminalWindowHandle <= 0) {
     window?.blur();
@@ -183,12 +159,16 @@ Add-Type @'
 using System;
 using System.Runtime.InteropServices;
 public static class Win32 {
+  [DllImport("user32.dll")] public static extern bool AllowSetForegroundWindow(int dwProcessId);
+  [DllImport("user32.dll")] public static extern bool BringWindowToTop(IntPtr hWnd);
   [DllImport("user32.dll")] public static extern bool SetForegroundWindow(IntPtr hWnd);
-  [DllImport("user32.dll")] public static extern bool ShowWindow(IntPtr hWnd, int nCmdShow);
+  [DllImport("user32.dll")] public static extern bool ShowWindowAsync(IntPtr hWnd, int nCmdShow);
 }
 '@
 $target = [IntPtr]::new([long]${terminalWindowHandle})
-[void][Win32]::ShowWindow($target, 5)
+[void][Win32]::AllowSetForegroundWindow(-1)
+[void][Win32]::ShowWindowAsync($target, 9)
+[void][Win32]::BringWindowToTop($target)
 [void][Win32]::SetForegroundWindow($target)
 `;
   runPowerShell(script, (error) => {
@@ -247,10 +227,7 @@ function show() {
     hide();
     return;
   }
-  if (!isVisible) {
-    captureTerminalWindow();
-    placeInitialWindow();
-  }
+  placeInitialWindow();
   isVisible = true;
   window.showInactive();
   window.webContents.send("pet-command", {
@@ -285,6 +262,16 @@ function handleCommand(command) {
   switch (command.type) {
     case "show":
       currentPet = command.pet || currentPet;
+      {
+        const handle = Number.parseInt(
+          String(command.terminal_window_handle || ""),
+          10,
+        );
+        if (Number.isSafeInteger(handle) && handle > 0) {
+          terminalWindowHandle = handle;
+          log(`received terminal window handle: ${terminalWindowHandle}`);
+        }
+      }
       show();
       break;
     case "hide":

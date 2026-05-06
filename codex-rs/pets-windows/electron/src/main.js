@@ -3,6 +3,7 @@ const fs = require("node:fs");
 const os = require("node:os");
 const path = require("node:path");
 const readline = require("node:readline");
+const { execFile } = require("node:child_process");
 
 let window = null;
 let lastSnapshot = null;
@@ -10,6 +11,7 @@ let currentPet = "codex";
 let isVisible = false;
 let dragState = null;
 let inertiaTimer = null;
+let terminalWindowHandle = null;
 const logPath = path.join(os.tmpdir(), "codex-pets-electron.log");
 const commandFilePath = argValue("--command-file");
 const WINDOW_SIZE = { width: 356, height: 320 };
@@ -105,11 +107,11 @@ function writeSavedBounds(bounds) {
   }
 }
 
-function bottomLeftBounds() {
+function bottomRightBounds() {
   const cursor = screen.getCursorScreenPoint();
   const workArea = screen.getDisplayNearestPoint(cursor).workArea;
   return {
-    x: workArea.x + DEFAULT_MARGIN,
+    x: workArea.x + workArea.width - WINDOW_SIZE.width - DEFAULT_MARGIN,
     y: workArea.y + workArea.height - WINDOW_SIZE.height - DEFAULT_MARGIN,
     width: WINDOW_SIZE.width,
     height: WINDOW_SIZE.height,
@@ -135,7 +137,65 @@ function placeInitialWindow() {
   if (window == null) {
     return;
   }
-  window.setBounds(clampBounds(bottomLeftBounds()), false);
+  window.setBounds(clampBounds(bottomRightBounds()), false);
+}
+
+function runPowerShell(script, callback) {
+  execFile(
+    "powershell.exe",
+    ["-NoProfile", "-WindowStyle", "Hidden", "-Command", script],
+    { windowsHide: true },
+    callback,
+  );
+}
+
+function captureTerminalWindow() {
+  const script = `
+Add-Type @'
+using System;
+using System.Runtime.InteropServices;
+public static class Win32 {
+  [DllImport("user32.dll")] public static extern IntPtr GetForegroundWindow();
+}
+'@
+[Win32]::GetForegroundWindow().ToInt64()
+`;
+  runPowerShell(script, (error, stdout) => {
+    if (error != null) {
+      log(`failed to capture foreground window: ${error}`);
+      return;
+    }
+    const handle = Number.parseInt(String(stdout).trim(), 10);
+    if (Number.isSafeInteger(handle) && handle > 0) {
+      terminalWindowHandle = handle;
+      log(`captured terminal window handle: ${terminalWindowHandle}`);
+    }
+  });
+}
+
+function focusTerminalWindow() {
+  if (!Number.isSafeInteger(terminalWindowHandle) || terminalWindowHandle <= 0) {
+    window?.blur();
+    return;
+  }
+  const script = `
+Add-Type @'
+using System;
+using System.Runtime.InteropServices;
+public static class Win32 {
+  [DllImport("user32.dll")] public static extern bool SetForegroundWindow(IntPtr hWnd);
+  [DllImport("user32.dll")] public static extern bool ShowWindow(IntPtr hWnd, int nCmdShow);
+}
+'@
+$target = [IntPtr]::new([long]${terminalWindowHandle})
+[void][Win32]::ShowWindow($target, 5)
+[void][Win32]::SetForegroundWindow($target)
+`;
+  runPowerShell(script, (error) => {
+    if (error != null) {
+      log(`failed to focus terminal window: ${error}`);
+    }
+  });
 }
 
 function stopInertia() {
@@ -188,6 +248,7 @@ function show() {
     return;
   }
   if (!isVisible) {
+    captureTerminalWindow();
     placeInitialWindow();
   }
   isVisible = true;
@@ -328,7 +389,7 @@ app.whenReady().then(() => {
 
 ipcMain.on("hide-pet", hide);
 ipcMain.on("open-terminal", () => {
-  window?.blur();
+  focusTerminalWindow();
 });
 ipcMain.on("pet-drag-start", (_event, payload) => {
   if (window == null) {

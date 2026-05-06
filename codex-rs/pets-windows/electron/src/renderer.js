@@ -11,7 +11,7 @@ const ASSETS = {
 
 const LAYOUT = {
   mascot: { left: 244, top: 191, width: 112, height: 121 },
-  tray: { left: 80, top: 96, width: 276, height: 90 },
+  tray: { left: 80, top: 56, width: 276, height: 131 },
 };
 const DRAG_THRESHOLD_PX = 4;
 const VELOCITY_SAMPLE_WINDOW_MS = 100;
@@ -41,6 +41,13 @@ const FRAME_SETS = {
   "running-right": row(1, 8, 120, 220),
   waving: row(3, 4, 140, 280),
   waiting: row(6, 6, 150, 260),
+};
+const ICONS = {
+  "check-circle": `<svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10" fill="currentColor"/><path d="M8 12.5l2.5 2.5L16 9.5" fill="none" stroke="var(--token-bg-primary)" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
+  chevron: `<svg width="16" height="16" viewBox="0 0 20 21" fill="none" aria-hidden="true"><path d="M15.2793 7.71101C15.539 7.45131 15.961 7.45131 16.2207 7.71101C16.4804 7.97071 16.4804 8.39272 16.2207 8.65242L10.4707 14.4024C10.211 14.6621 9.78902 14.6621 9.52932 14.4024L3.77932 8.65242L3.69436 8.54792C3.52385 8.28979 3.55205 7.93828 3.77932 7.71101C4.00659 7.48374 4.3581 7.45554 4.61623 7.62605L4.72073 7.71101L10 12.9903L15.2793 7.71101Z" fill="currentColor" stroke="currentColor" stroke-width=".6"/></svg>`,
+  clock: `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="12" cy="12" r="8" stroke="currentColor" stroke-width="2"/><path d="M12 7v5l3 2" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
+  spinner: `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path opacity=".3" d="M18 12C18 8.68629 15.3137 6 12 6C8.68629 6 6 8.68629 6 12C6 15.3137 8.68629 18 12 18C15.3137 18 18 15.3137 18 12ZM20 12C20 16.4183 16.4183 20 12 20C7.58172 20 4 16.4183 4 12C4 7.58172 7.58172 4 12 4C16.4183 4 20 7.58172 20 12Z" fill="currentColor"/><path d="M12 4C16.4183 4 20 7.58172 20 12C20 16.4183 16.4183 20 12 20C7.58172 20 4 16.4183 4 12H6C6 15.3137 8.68629 18 12 18C15.3137 18 18 15.3137 18 12C18 8.68629 15.3137 6 12 6V4Z" fill="currentColor"/></svg>`,
+  warning: `<svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3 2 21h20L12 3Z" fill="currentColor"/><path d="M12 9v5" stroke="var(--token-bg-primary)" stroke-width="2" stroke-linecap="round"/><circle cx="12" cy="17" r="1.2" fill="var(--token-bg-primary)"/></svg>`,
 };
 
 const overlay = document.getElementById("overlay");
@@ -204,8 +211,14 @@ function applySnapshot(snapshot) {
   title.textContent = snapshot.title || "Codex";
   body.textContent = snapshot.subtitle || snapshot.detail || mapped.fallbackBody;
   statusIcon.className = `status-icon ${mapped.iconClass}`;
+  statusIcon.innerHTML = ICONS[mapped.iconClass] || ICONS.clock;
   badge.hidden = !hasNotification;
-  badgeContent.textContent = collapsed ? String(Math.max(1, notificationCount)) : "";
+  badgeContent.textContent = "";
+  if (collapsed) {
+    badgeContent.textContent = String(Math.max(1, notificationCount));
+  } else {
+    badgeContent.innerHTML = ICONS.chevron;
+  }
   badge.classList.toggle("is-icon-only", !collapsed);
   badge.classList.toggle("is-count", collapsed);
   if (collapsed) {

@@ -61,7 +61,9 @@ button {
 }
 
 .notification-tray-inner {
-  position: relative;
+  display: flex;
+  height: 100%;
+  align-items: flex-end;
   max-height: 131px;
   overflow: hidden;
   transform-origin: bottom right;
@@ -120,17 +122,17 @@ button {
 
 .notification-title {
   padding-right: 4px;
-  font-size: 16px;
-  line-height: 16px;
+  font-size: 15px;
+  line-height: 17px;
   font-weight: 640;
-  letter-spacing: -0.01em;
+  letter-spacing: 0;
 }
 
 .notification-body {
   max-height: 30px;
   margin-top: 1px;
-  font-size: 15px;
-  line-height: 15px;
+  font-size: 14px;
+  line-height: 16px;
   font-weight: 400;
 }
 
@@ -148,65 +150,22 @@ button {
   pointer-events: none;
 }
 
-.status-icon.spinner::before {
+.status-icon svg {
   width: 16px;
   height: 16px;
-  border: 3px solid rgba(203, 209, 240, 0.25);
-  border-top-color: #8f96bc;
-  border-radius: 999px;
+  flex: 0 0 auto;
+}
+
+.status-icon.spinner svg {
   animation: spin 900ms linear infinite;
-  content: "";
 }
 
 .status-icon.check-circle {
   color: var(--token-charts-green);
 }
 
-.status-icon.check-circle::before {
-  width: 16px;
-  height: 16px;
-  border-radius: 999px;
-  background: currentColor;
-  content: "";
-}
-
-.status-icon.check-circle::after {
-  position: absolute;
-  width: 8px;
-  height: 4px;
-  border-bottom: 2px solid var(--token-bg-primary);
-  border-left: 2px solid var(--token-bg-primary);
-  content: "";
-  transform: translateY(-1px) rotate(-45deg);
-}
-
-.status-icon.clock::before {
-  width: 15px;
-  height: 15px;
-  border: 2px solid currentColor;
-  border-radius: 999px;
-  content: "";
-}
-
-.status-icon.clock::after {
-  position: absolute;
-  width: 5px;
-  height: 7px;
-  border-bottom: 2px solid currentColor;
-  border-left: 2px solid currentColor;
-  content: "";
-  transform: translate(2px, -1px);
-}
-
 .status-icon.warning {
   color: var(--token-error-foreground);
-}
-
-.status-icon.warning::before {
-  font-size: 15px;
-  font-weight: 800;
-  line-height: 1;
-  content: "!";
 }
 
 .mascot-frame {
@@ -278,17 +237,14 @@ button {
 }
 
 .notification-badge.is-icon-only::before {
-  width: 8px;
-  height: 8px;
-  border-right: 2px solid currentColor;
-  border-bottom: 2px solid currentColor;
-  content: "";
-  opacity: 0.72;
-  transform: translateY(-2px) rotate(45deg);
+  content: none;
 }
 
 .notification-badge.is-icon-only #badgeContent {
-  display: none;
+  display: inline-flex;
+  width: 16px;
+  height: 16px;
+  opacity: 0.8;
 }
 
 .notification-badge.is-count:hover {

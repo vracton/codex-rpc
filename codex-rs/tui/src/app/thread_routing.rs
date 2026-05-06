@@ -1399,6 +1399,8 @@ impl App {
         if needs_refresh {
             self.refresh_status_line();
         }
+        self.sync_discord_presence();
+        self.sync_pets();
     }
 
     pub(super) fn handle_thread_event_replay(&mut self, event: ThreadBufferedEvent) {

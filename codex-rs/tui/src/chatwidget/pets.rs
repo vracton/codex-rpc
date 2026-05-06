@@ -27,15 +27,29 @@ impl ChatWidget {
                 .find(|line| !line.is_empty())
                 .map(std::borrow::ToOwned::to_owned)
         });
-        let subtitle = if state == PetState::Review {
-            completed_preview.or(Some(self.current_status.header.clone()))
+        let current_status_header = if state != PetState::Running
+            && self.current_status.header.eq_ignore_ascii_case("working")
+        {
+            None
         } else {
             Some(self.current_status.header.clone())
         };
-        let detail = if state == PetState::Review {
+        let subtitle = if state == PetState::Review {
+            completed_preview
+                .or(current_status_header)
+                .or_else(|| Some("Ready".to_string()))
+        } else if state == PetState::Idle {
             None
         } else {
+            current_status_header
+        };
+        let detail = if matches!(
+            state,
+            PetState::Running | PetState::Waiting | PetState::Failed
+        ) {
             self.current_status.details.clone().or(Some(model))
+        } else {
+            None
         };
 
         PetsSnapshot {

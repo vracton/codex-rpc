@@ -11,7 +11,7 @@ const ASSETS = {
 
 const LAYOUT = {
   mascot: { left: 244, top: 191, width: 112, height: 121 },
-  tray: { left: 80, top: 70, width: 276, height: 112 },
+  tray: { left: 80, top: 96, width: 276, height: 90 },
 };
 const DRAG_THRESHOLD_PX = 4;
 const VELOCITY_SAMPLE_WINDOW_MS = 100;

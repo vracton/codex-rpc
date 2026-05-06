@@ -46,18 +46,14 @@ button {
   position: relative;
   width: 100%;
   height: 100%;
-  cursor: grab;
-}
-
-.content-frame:active {
-  cursor: grabbing;
+  cursor: default;
 }
 
 .notification-tray {
   position: absolute;
   z-index: 10;
   color: var(--token-foreground);
-  cursor: grab;
+  cursor: default;
 }
 
 .notification-tray[aria-hidden="true"] {
@@ -103,7 +99,7 @@ button {
   border: 0;
   background: transparent;
   color: inherit;
-  cursor: inherit;
+  cursor: default;
   text-align: left;
 }
 
@@ -217,10 +213,6 @@ button {
   position: absolute;
   z-index: 20;
   transition: transform 160ms ease-out;
-}
-
-.content-frame:active .mascot-frame {
-  transform: scale(0.95);
 }
 
 .mascot-button {

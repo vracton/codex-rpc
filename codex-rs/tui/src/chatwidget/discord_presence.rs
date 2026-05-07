@@ -15,7 +15,7 @@ impl ChatWidget {
 
         let location = format_directory_display(self.status_line_cwd(), /*max_width*/ None);
         let small_text = self
-            .status_line_value_for_item(&StatusLineItem::ModelWithReasoning)
+            .status_line_value_for_item(StatusLineItem::ModelWithReasoning)
             .unwrap_or_else(|| self.model_display_name().to_string());
         let details = format!("Working in {location}");
 

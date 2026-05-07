@@ -16,7 +16,7 @@ impl ChatWidget {
             .cloned()
             .unwrap_or_else(|| format!("Working in {location}"));
         let model = self
-            .status_line_value_for_item(&StatusLineItem::ModelWithReasoning)
+            .status_line_value_for_item(StatusLineItem::ModelWithReasoning)
             .unwrap_or_else(|| self.model_display_name().to_string());
 
         let state = self.pet_state();
@@ -64,9 +64,9 @@ impl ChatWidget {
         PetsSnapshot {
             state,
             title: self
-                .last_rendered_user_message_event
+                .last_rendered_user_message_display
                 .as_ref()
-                .map(|event| event.message.trim())
+                .map(|display| display.message.trim())
                 .filter(|message| !message.is_empty())
                 .map(std::borrow::ToOwned::to_owned)
                 .unwrap_or(title),

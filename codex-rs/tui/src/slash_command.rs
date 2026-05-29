@@ -13,7 +13,6 @@ pub enum SlashCommand {
     // DO NOT ALPHA-SORT! Enum order is presentation order in the popup, so
     // more frequently used commands should be listed first.
     Model,
-    Fast,
     Ide,
     Permissions,
     Keymap,
@@ -37,9 +36,9 @@ pub enum SlashCommand {
     Compact,
     Plan,
     Goal,
-    Collab,
     Agent,
     Side,
+    Btw,
     Copy,
     Raw,
     Diff,
@@ -49,8 +48,9 @@ pub enum SlashCommand {
     Title,
     Statusline,
     Theme,
-    #[strum(to_string = "pet")]
     Pets,
+    #[strum(to_string = "pet")]
+    DesktopPet,
     Mcp,
     Apps,
     Plugins,
@@ -101,15 +101,13 @@ impl SlashCommand {
             SlashCommand::Title => "configure which items appear in the terminal title",
             SlashCommand::Statusline => "configure which items appear in the status line",
             SlashCommand::Theme => "choose a syntax highlighting theme",
-            SlashCommand::Pets => "toggle the desktop pet overlay",
+            SlashCommand::Pets => "choose or hide the terminal pet",
+            SlashCommand::DesktopPet => "toggle the desktop pet overlay",
             SlashCommand::Ps => "list background terminals",
             SlashCommand::Stop => "stop all background terminals",
             SlashCommand::MemoryDrop => "DO NOT USE",
             SlashCommand::MemoryUpdate => "DO NOT USE",
             SlashCommand::Model => "choose what model and reasoning effort to use",
-            SlashCommand::Fast => {
-                "toggle Fast mode to enable fastest inference with increased plan usage"
-            }
             SlashCommand::Ide => {
                 "include current selection, open files, and other context from your IDE"
             }
@@ -118,9 +116,10 @@ impl SlashCommand {
             SlashCommand::Settings => "configure realtime microphone/speaker",
             SlashCommand::Plan => "switch to Plan mode",
             SlashCommand::Goal => "set or view the goal for a long-running task",
-            SlashCommand::Collab => "change collaboration mode (experimental)",
             SlashCommand::Agent | SlashCommand::MultiAgents => "switch the active agent thread",
-            SlashCommand::Side => "start a side conversation in an ephemeral fork",
+            SlashCommand::Side | SlashCommand::Btw => {
+                "start a side conversation in an ephemeral fork"
+            }
             SlashCommand::Permissions => "choose what Codex is allowed to do",
             SlashCommand::Keymap => "remap TUI shortcuts",
             SlashCommand::Vim => "toggle Vim mode for the composer",
@@ -154,12 +153,13 @@ impl SlashCommand {
                 | SlashCommand::Rename
                 | SlashCommand::Plan
                 | SlashCommand::Goal
-                | SlashCommand::Fast
                 | SlashCommand::Ide
                 | SlashCommand::Keymap
                 | SlashCommand::Mcp
                 | SlashCommand::Raw
+                | SlashCommand::Pets
                 | SlashCommand::Side
+                | SlashCommand::Btw
                 | SlashCommand::Resume
                 | SlashCommand::SandboxReadRoot
         )
@@ -175,6 +175,7 @@ impl SlashCommand {
                 | SlashCommand::Mention
                 | SlashCommand::Status
                 | SlashCommand::Pets
+                | SlashCommand::DesktopPet
                 | SlashCommand::Ide
         )
     }
@@ -188,7 +189,6 @@ impl SlashCommand {
             | SlashCommand::Init
             | SlashCommand::Compact
             | SlashCommand::Model
-            | SlashCommand::Fast
             | SlashCommand::Personality
             | SlashCommand::Permissions
             | SlashCommand::Keymap
@@ -221,17 +221,18 @@ impl SlashCommand {
             | SlashCommand::Title
             | SlashCommand::Statusline
             | SlashCommand::Pets
+            | SlashCommand::DesktopPet
             | SlashCommand::AutoReview
             | SlashCommand::Feedback
             | SlashCommand::Ide
             | SlashCommand::Quit
             | SlashCommand::Exit
-            | SlashCommand::Side => true,
+            | SlashCommand::Side
+            | SlashCommand::Btw => true,
             SlashCommand::Rollout => true,
             SlashCommand::TestApproval => true,
             SlashCommand::Realtime => true,
             SlashCommand::Settings => true,
-            SlashCommand::Collab => true,
             SlashCommand::Agent | SlashCommand::MultiAgents => true,
             SlashCommand::Theme => false,
         }
@@ -273,6 +274,14 @@ mod tests {
     }
 
     #[test]
+    fn pet_alias_parses_to_pets_command() {
+        assert_eq!(SlashCommand::Pets.command(), "pets");
+        assert_eq!(SlashCommand::from_str("pets"), Ok(SlashCommand::Pets));
+        assert_eq!(SlashCommand::DesktopPet.command(), "pet");
+        assert_eq!(SlashCommand::from_str("pet"), Ok(SlashCommand::DesktopPet));
+    }
+
+    #[test]
     fn certain_commands_are_available_during_task() {
         assert!(SlashCommand::Goal.available_during_task());
         assert!(SlashCommand::Ide.available_during_task());
@@ -290,11 +299,5 @@ mod tests {
             SlashCommand::from_str("approve"),
             Ok(SlashCommand::AutoReview)
         );
-    }
-
-    #[test]
-    fn pet_command_is_canonical_name() {
-        assert_eq!(SlashCommand::Pets.command(), "pet");
-        assert_eq!(SlashCommand::from_str("pet"), Ok(SlashCommand::Pets));
     }
 }

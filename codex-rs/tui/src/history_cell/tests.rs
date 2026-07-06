@@ -15,11 +15,13 @@ use codex_otel::RuntimeMetricTotals;
 use codex_otel::RuntimeMetricsSummary;
 use codex_protocol::ThreadId;
 use codex_protocol::account::PlanType;
+use codex_protocol::error::UnexpectedResponseError;
 use codex_protocol::parse_command::ParsedCommand;
 use dirs::home_dir;
 use pretty_assertions::assert_eq;
 use ratatui::buffer::Buffer;
 use ratatui::layout::Rect;
+use reqwest::StatusCode;
 use serde_json::json;
 use std::collections::HashMap;
 use std::path::PathBuf;
@@ -43,6 +45,24 @@ fn test_cwd() -> PathBuf {
     // These tests only need a stable absolute cwd; using temp_dir() avoids baking Unix- or
     // Windows-specific root semantics into the fixtures.
     std::env::temp_dir()
+}
+
+#[test]
+fn streaming_agent_tail_blank_line_uses_one_viewport_row() {
+    let cell = StreamingAgentTailCell::new(
+        vec![
+            HyperlinkLine::from("first"),
+            HyperlinkLine::from(""),
+            HyperlinkLine::from("second"),
+        ],
+        /*is_first_line*/ false,
+    );
+
+    let lines = cell.display_lines(/*width*/ 80);
+    insta::assert_snapshot!(render_lines(&lines).join("\n"), @"  first
+
+  second");
+    assert_eq!(cell.desired_height(/*width*/ 80), 3);
 }
 
 fn stdio_server_config(
@@ -296,6 +316,47 @@ fn proposed_plan_cell_renders_markdown_table() {
 }
 
 #[test]
+fn proposed_plan_cell_preserves_wrapped_table_web_links() {
+    let destination = "https://example.com/a/very/long/path/to/a/table/artifact";
+    let plan = new_proposed_plan(
+        format!("| Step | URL |\n| --- | --- |\n| Verify | {destination} |\n"),
+        &test_cwd(),
+    );
+
+    let lines = plan.display_hyperlink_lines(/*width*/ 32);
+    let linked_rows = lines
+        .iter()
+        .filter(|line| !line.hyperlinks.is_empty())
+        .collect::<Vec<_>>();
+
+    assert!(linked_rows.len() > 1);
+    assert!(linked_rows.iter().all(|line| {
+        line.hyperlinks
+            .iter()
+            .all(|link| link.destination == destination)
+    }));
+}
+
+#[test]
+fn composite_cell_preserves_child_web_links() {
+    let destination = "https://chatgpt.com/codex/settings/usage";
+    let cell = CompositeHistoryCell::new(vec![
+        Box::new(PlainHistoryCell::new(vec![Line::from("/status")])),
+        Box::new(WebHyperlinkHistoryCell::new(vec![Line::from(destination)])),
+    ]);
+
+    let lines = cell.display_hyperlink_lines(/*width*/ 80);
+
+    assert_eq!(
+        lines[2].hyperlinks,
+        vec![crate::terminal_hyperlinks::TerminalHyperlink {
+            columns: 0..destination.len(),
+            destination: destination.to_string(),
+        }]
+    );
+}
+
+#[test]
 fn proposed_plan_cell_unwraps_markdown_fenced_table() {
     let plan = new_proposed_plan(
         "## Plan\n\n```markdown\n| Step | Owner |\n| --- | --- |\n| Verify | Codex |\n```\n"
@@ -415,6 +476,7 @@ fn image_generation_call_renders_saved_path() {
     );
     let cell = new_image_generation_call(
         "call-image-generation".to_string(),
+        "completed",
         Some("A tiny blue square".to_string()),
         Some(saved_path),
     );
@@ -692,6 +754,31 @@ fn error_event_oversized_input_snapshot() {
     insta::assert_snapshot!(rendered);
 }
 
+#[test]
+fn error_event_bedrock_expired_signature_snapshot() {
+    let error = UnexpectedResponseError {
+        status: StatusCode::UNAUTHORIZED,
+        body: "Signature expired: 20260609T133205Z is now earlier than 20260614T062525Z \
+(20260614T063025Z - 5 min.)"
+            .to_string(),
+        user_message: Some(
+            "Amazon Bedrock rejected the request because its AWS signature has expired. \
+Refresh your AWS credentials and retry. If `AWS_BEARER_TOKEN_BEDROCK` is set, update or \
+unset it, then restart Codex"
+                .to_string(),
+        ),
+        url: Some("https://bedrock-mantle.us-east-2.api.aws/openai/v1/responses".to_string()),
+        cf_ray: None,
+        request_id: None,
+        identity_authorization_error: None,
+        identity_error_code: None,
+    };
+    let cell = new_error_event(error.to_string());
+    let rendered = render_lines(&cell.display_lines(/*width*/ 100)).join("\n");
+
+    insta::assert_snapshot!(rendered);
+}
+
 #[tokio::test]
 async fn mcp_tools_output_masks_sensitive_values() {
     let mut config = test_config().await;
@@ -802,6 +889,7 @@ async fn mcp_tools_output_lists_tools_for_hyphenated_server_names() {
 fn mcp_tools_output_from_statuses_renders_status_only_servers() {
     let statuses = vec![McpServerStatus {
         name: "plugin_docs".to_string(),
+        server_info: None,
         tools: HashMap::from([(
             "lookup".to_string(),
             Tool {
@@ -831,6 +919,7 @@ fn mcp_tools_output_from_statuses_renders_status_only_servers() {
 fn mcp_tools_output_from_statuses_renders_verbose_inventory() {
     let statuses = vec![McpServerStatus {
         name: "plugin_docs".to_string(),
+        server_info: None,
         tools: HashMap::from([(
             "lookup".to_string(),
             Tool {
@@ -1042,6 +1131,14 @@ fn standalone_windows_update_available_history_cell_snapshot() {
 }
 
 #[test]
+fn web_search_history_cell_without_detail_snapshot() {
+    let cell = new_web_search_call("call-1".to_string(), String::new(), WebSearchAction::Other);
+    let rendered = render_lines(&cell.display_lines(/*width*/ 64)).join("\n");
+
+    insta::assert_snapshot!(rendered);
+}
+
+#[test]
 fn web_search_history_cell_wraps_with_indented_continuation() {
     let query = "example search query with several generic words to exercise wrapping".to_string();
     let cell = new_web_search_call(
@@ -1057,8 +1154,8 @@ fn web_search_history_cell_wraps_with_indented_continuation() {
     assert_eq!(
         rendered,
         vec![
-            "• Searched example search query with several generic words to".to_string(),
-            "  exercise wrapping".to_string(),
+            "• Searched the web for example search query with several generic".to_string(),
+            "  words to exercise wrapping".to_string(),
         ]
     );
 }
@@ -1076,7 +1173,10 @@ fn web_search_history_cell_short_query_does_not_wrap() {
     );
     let rendered = render_lines(&cell.display_lines(/*width*/ 64));
 
-    assert_eq!(rendered, vec!["• Searched short query".to_string()]);
+    assert_eq!(
+        rendered,
+        vec!["• Searched the web for short query".to_string()]
+    );
 }
 
 #[test]
